@@ -1,0 +1,30 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29215.179
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Fable.Elmish.Adaptive", "src\Fable.Elmish.Adaptive\Fable.Elmish.Adaptive.fsproj", "{652F193D-A567-4BB0-8609-DF08A746160E}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Demo", "src\Demo\Demo.fsproj", "{8021C6E3-4BDE-43FD-B61F-354ABB557B13}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{652F193D-A567-4BB0-8609-DF08A746160E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{652F193D-A567-4BB0-8609-DF08A746160E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{652F193D-A567-4BB0-8609-DF08A746160E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{652F193D-A567-4BB0-8609-DF08A746160E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8021C6E3-4BDE-43FD-B61F-354ABB557B13}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8021C6E3-4BDE-43FD-B61F-354ABB557B13}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8021C6E3-4BDE-43FD-B61F-354ABB557B13}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8021C6E3-4BDE-43FD-B61F-354ABB557B13}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {0E91AEEA-75F2-484D-8E5E-E3322D13C65A}
+	EndGlobalSection
+EndGlobal
