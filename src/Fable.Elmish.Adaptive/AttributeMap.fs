@@ -95,105 +95,83 @@ module AttributeMap =
             union map (singleAdaptiveOption name value)
         )
 
-type AttributeMapBuilderCore() =
+[<AutoOpen>]
+module AttributeMapBuilder = 
+
+    [<Sealed>]
+    type AttributeMapBuilder() =
     
-    member inline x.Yield((name : string, value : string)) =
-        AttributeMap.single name (AttributeValue.String value)
+        member inline x.Yield((name : string, value : string)) =
+            AttributeMap.single name (AttributeValue.String value)
         
-    member inline x.Yield((name : string, desc : EventDescription)) =
-        AttributeMap.single name (AttributeValue.Event [desc])
+        member inline x.Yield((name : string, desc : EventDescription)) =
+            AttributeMap.single name (AttributeValue.Event [desc])
         
-    member inline x.Yield((name : string, value : aval<string>)) =
-        AttributeMap.singleAdaptive name (AVal.map AttributeValue.String value)
+        member inline x.Yield((name : string, value : AttributeValue)) =
+            AttributeMap.single name value
         
-    member inline x.Yield((name : string, value : aval<option<string>>)) =
-        AttributeMap.singleAdaptiveOption name (AVal.map (Option.map AttributeValue.String) value)
+        member inline x.Yield((name : string, value : aval<string>)) =
+            AttributeMap.singleAdaptive name (AVal.map AttributeValue.String value)
         
-    member inline x.Yield((name : string, value : aval<EventDescription>)) =
-        AttributeMap.singleAdaptive name (AVal.map (List.singleton >> AttributeValue.Event) value)
+        member inline x.Yield((name : string, value : aval<option<string>>)) =
+            AttributeMap.singleAdaptiveOption name (AVal.map (Option.map AttributeValue.String) value)
         
-    member inline x.Yield((name : string, value : aval<option<EventDescription>>)) =
-        AttributeMap.singleAdaptiveOption name (AVal.map (Option.map (List.singleton >> AttributeValue.Event)) value)
+        member inline x.Yield((name : string, value : aval<EventDescription>)) =
+            AttributeMap.singleAdaptive name (AVal.map (List.singleton >> AttributeValue.Event) value)
         
-    member inline x.Yield(value : aval<option<string * string>>) =
-        value 
-        |> AVal.map (function Some (name, value) -> [name, AttributeValue.String value] | None -> [])
-        |> AMap.ofAVal
-        |> AttributeMap
+        member inline x.Yield((name : string, value : aval<option<EventDescription>>)) =
+            AttributeMap.singleAdaptiveOption name (AVal.map (Option.map (List.singleton >> AttributeValue.Event)) value)
         
-    member inline x.Yield(value : aval<option<string * EventDescription>>) =
-        value 
-        |> AVal.map (function Some (name, value) -> [name, AttributeValue.Event [value]] | None -> [])
-        |> AMap.ofAVal
-        |> AttributeMap
+        member inline x.Yield((name : string, value : aval<AttributeValue>)) =
+            AttributeMap.singleAdaptive name value
+
+        member inline x.Yield((name : string, value : aval<option<AttributeValue>>)) =
+            AttributeMap.singleAdaptiveOption name value
+        
+        member inline x.Yield(value : aval<option<string * string>>) =
+            value 
+            |> AVal.map (function Some (name, value) -> [name, AttributeValue.String value] | None -> [])
+            |> AMap.ofAVal
+            |> AttributeMap
+        
+        member inline x.Yield(value : aval<option<string * EventDescription>>) =
+            value 
+            |> AVal.map (function Some (name, value) -> [name, AttributeValue.Event [value]] | None -> [])
+            |> AMap.ofAVal
+            |> AttributeMap
            
-    member inline x.Yield(value : aval<string * string>) =
-        value 
-        |> AVal.map (fun (name, value) -> [name, AttributeValue.String value])
-        |> AMap.ofAVal
-        |> AttributeMap
+        member inline x.Yield(value : aval<option<string * AttributeValue>>) =
+            value 
+            |> AVal.map (function Some (name, value) -> [name, value] | None -> [])
+            |> AMap.ofAVal
+            |> AttributeMap
+
+        member inline x.Yield(value : aval<string * string>) =
+            value 
+            |> AVal.map (fun (name, value) -> [name, AttributeValue.String value])
+            |> AMap.ofAVal
+            |> AttributeMap
         
-    member inline x.Yield(value : aval<string * EventDescription>) =
-        value 
-        |> AVal.map (fun (name, value) -> [name, AttributeValue.Event [value]])
-        |> AMap.ofAVal
-        |> AttributeMap
+        member inline x.Yield(value : aval<string * EventDescription>) =
+            value 
+            |> AVal.map (fun (name, value) -> [name, AttributeValue.Event [value]])
+            |> AMap.ofAVal
+            |> AttributeMap
+        
+        member inline x.Yield(value : aval<string * AttributeValue>) =
+            value 
+            |> AVal.map (fun (name, value) -> [name, value])
+            |> AMap.ofAVal
+            |> AttributeMap
+        member inline x.Zero() =
+            AttributeMap.empty
 
-    member inline x.Zero() =
-        AttributeMap.empty
+        member inline x.Delay(f : unit -> AttributeMap) = f
 
-    member inline x.Delay(f : unit -> AttributeMap) = f
-
-    member inline x.Combine(l : AttributeMap, r : unit -> AttributeMap) =
-        AttributeMap.union l (r())
-
-type AttributeMapBuilder() =
-    inherit AttributeMapBuilderCore()
-
-    member inline x.Run(f : unit -> AttributeMap) =
-        f()
-
-module Test =
+        member inline x.Combine(l : AttributeMap, r : unit -> AttributeMap) =
+            AttributeMap.union l (r())
+        
+        member inline x.Run(f : unit -> AttributeMap) = f()
+        
     let att = AttributeMapBuilder()
-
-    type Node = Node
-
-    type DomNodeBuilder(tag : string, attributes : AttributeMap) =
-        member inline x.Zero() = AList.empty
-        member inline x.Combine(l : alist<Node>, r : alist<Node>) = AList.append l r
-        member inline x.Yield(node : Node) = AList.single node
-        member inline x.Delay(f : unit -> alist<Node>) = f
-        member x.Run(f : unit -> alist<Node>) = 
-            tag, attributes, f()
-
-    type CrazyBuilder(tag : string) =
-        inherit AttributeMapBuilderCore()
-
-        member x.Run(f : unit -> AttributeMap) =
-            (DomNodeBuilder(tag, f()))
-        
-    let div = CrazyBuilder("div")
-
-    let node =
-        (div { "class", "something"; "style", "width: 100%" }) {
-            Node
-        }
-
-
-
-    let mine =
-        att {
-            "class", "something"
-            "click", { useCapture = true; callback = fun e -> console.warn e }
-
-            "height", AVal.constant "100"
-            "width", AVal.constant (Some "100")
-            "enter", AVal.constant { useCapture = true; callback = fun e -> console.warn e }
-            "exit", AVal.constant (Some { useCapture = true; callback = fun e -> console.warn e })
-
-            AVal.constant ("mousemove", { useCapture = false; callback = ignore })
-            AVal.constant (Some ("mousemove", { useCapture = false; callback = ignore }))
-            AVal.constant ("pointer", "cursor")
-            AVal.constant (Some ("pointer", "none"))
-        }
 
