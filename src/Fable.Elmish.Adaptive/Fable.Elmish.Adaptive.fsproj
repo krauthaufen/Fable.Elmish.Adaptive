@@ -13,6 +13,7 @@
   <ItemGroup>
     <Compile Include="AttributeMap.fs" />
     <Compile Include="DomNode.fs" />
+    <Compile Include="Updater.fs" />
   </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>

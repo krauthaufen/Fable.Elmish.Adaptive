@@ -157,7 +157,7 @@ module Tags =
     let inline small props children = DomNode.inner { xmlns = None; name = "small" } props children
     let inline span props children = DomNode.inner { xmlns = None; name = "span" } props children
     let inline strong props children = DomNode.inner { xmlns = None; name = "strong" } props children
-    let inline style props children = DomNode.inner { xmlns = None; name = "style" } props children
+    //let inline style props children = DomNode.inner { xmlns = None; name = "style" } props children
     let inline sub props children = DomNode.inner { xmlns = None; name = "sub" } props children
     let inline summary props children = DomNode.inner { xmlns = None; name = "summary" } props children
     let inline sup props children = DomNode.inner { xmlns = None; name = "sup" } props children
@@ -300,7 +300,7 @@ module Generic =
         let inline small props children = DomNode.generic { xmlns = None; name = "small" } props children
         let inline span props children = DomNode.generic { xmlns = None; name = "span" } props children
         let inline strong props children = DomNode.generic { xmlns = None; name = "strong" } props children
-        let inline style props children = DomNode.generic { xmlns = None; name = "style" } props children
+        //let inline style props children = DomNode.generic { xmlns = None; name = "style" } props children
         let inline sub props children = DomNode.generic { xmlns = None; name = "sub" } props children
         let inline summary props children = DomNode.generic { xmlns = None; name = "summary" } props children
         let inline sup props children = DomNode.generic { xmlns = None; name = "sup" } props children
