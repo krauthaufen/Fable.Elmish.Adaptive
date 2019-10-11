@@ -10,6 +10,7 @@ nuget Adaptify.MSBuild                      ~> 0.0.1
 nuget Fable.Core                            ~> 3.1.1
 nuget Fable.Browser.Dom                     ~> 1.1.0
 
+nuget Fable.Elmish.React                    ~> 3.0.1
 group Build
   source https://api.nuget.org/v3/index.json
   nuget fake-cli ~> 5.16.1

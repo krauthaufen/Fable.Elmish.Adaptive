@@ -3,3 +3,4 @@ Fable.Core
 Fable.Browser.Dom
 FSharp.Data.Adaptive
 Adaptify.MSBuild
+Fable.Elmish.React

@@ -68,7 +68,6 @@ module Updater =
     type NodeUpdater(s : Scope) =
         inherit AdaptiveObject()
 
-
         static let create (scope : Scope) (createNode : Tag -> HTMLElement) (n : DomNode) =
             match n with
             | DomNode.Text(a,b,c) -> TextUpdater(scope, createNode(a), a, b, c) :> NodeUpdater
@@ -240,13 +239,20 @@ module Updater =
         let mutable nodes : IndexList<NodeUpdater> = IndexList.empty
         let att = AttributeUpdater(node, node, attributes)
         
+        let mutable dirty = ReferenceHashSet.create()
 
         let update (t : AdaptiveToken) (ops : IndexListDelta<DomNode>) =
+            let dirty =
+                let d = dirty
+                dirty <- ReferenceHashSet.create()
+                d
+
             for (i, op) in IndexListDelta.toSeq ops do
                 match op with
                 | Remove ->
                     match IndexList.tryRemove i nodes with
                     | Some (u, rest) ->
+                        dirty.Remove u |> ignore
                         nodes <- rest
                         u.Destroy()
                         if unbox u.Node then
@@ -289,8 +295,13 @@ module Updater =
                         n.Update(t)
                         nodes <- IndexList.set i n nodes
 
-            for s in IndexList.toSeq nodes do
+            for s in dirty do
                 s.Update(t)
+
+        override x.InputChangedObject(t : obj, inner : IAdaptiveObject) =
+            if not (System.Object.ReferenceEquals(inner, att)) then 
+                dirty.Add (unbox<NodeUpdater> inner) |> ignore
+            ()
 
         override x.Node = node
         override x.Compute(t) =
