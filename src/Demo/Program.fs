@@ -113,7 +113,7 @@ module Benchmark =
             )
 
         updater.Destroy()
-        appendCode (sprintf "adaptive %d/%d" cnt changes) "initial: %.3fms\ntransact: %.3fms\nupdate:   %.3fms\ntotal:    %.3fms" initial transactTime updateTime totalTime
+        appendCode (sprintf "adaptive %d/%d" cnt changes) "initial: %.3fms\ntransact: %.3fms\nupdate:   %.3fms\ntotal:    %.3fms" initial (transactTime / float changes) (updateTime / float changes) (totalTime / float changes)
 
 
     open Elmish
@@ -164,7 +164,7 @@ module Benchmark =
                     setState l
             )
 
-        appendCode (sprintf "react %d/%d" cnt changes) "initial: %.3fms\nupdate: %.3fms" initial took
+        appendCode (sprintf "react %d/%d" cnt changes) "initial: %.3fms\nupdate: %.3fms" initial (took / float changes)
         div.remove()
 
 
@@ -244,8 +244,8 @@ let main argv =
             document.body?style?flexWrap <- "wrap"
 
             for c in 1000 .. 1000 .. 5000 do
-                Benchmark.runReact c 1
-                Benchmark.runAdaptive c 1
+                Benchmark.runReact c 50
+                Benchmark.runAdaptive c 50
             //for c in 100 .. 100 .. 5000 do
             //    Benchmark.runAdaptive c
 
