@@ -59,11 +59,10 @@ module Benchmark =
             document.body.appendChild quote |> ignore
         )
 
-    let runAdaptive(cnt : int) =
+    let runAdaptive(cnt : int) (changes : int) =
         let list = IndexList.ofList [ 1 .. cnt ]
         let elements = clist list
         let root = document.createElement "div"
-        root?style?display <- "none"
         document.body.appendChild root |> ignore
 
         let view =
@@ -79,20 +78,26 @@ module Benchmark =
                     { new IDisposable with member x.Dispose() = () } 
             }
         
-        let updater = Updater.create root dummyScope view
+        let mutable updater = Updater.create root dummyScope view
         updater.Update(AdaptiveToken.Top)
-        
+
         // warmup
         for i in 1 .. 20 do
             transact (fun () -> elements.Value <- IndexList.add i elements.Value)
             updater.Update AdaptiveToken.Top
             
+        updater.Destroy()
         transact (fun () -> elements.Value <- list)
-        updater.Update AdaptiveToken.Top
+        
+        let initial = 
+            timed (fun () ->
+                updater <- Updater.create root dummyScope view
+                updater.Update AdaptiveToken.Top
+            )
 
 
         let rand = System.Random()
-        let indices = List.init 100 (fun _ -> list.TryGetIndex(rand.Next(elements.Count)).Value)
+        let indices = List.init changes (fun _ -> list.TryGetIndex(rand.Next(elements.Count)).Value)
 
         let mutable updateTime = 0.0
         let mutable transactTime = 0.0
@@ -107,27 +112,49 @@ module Benchmark =
                         timed (fun () -> updater.Update AdaptiveToken.Top)
             )
 
-        updater.Node.remove()
-        appendCode (string cnt) "transact: %.3fms\nupdate:   %.3fms\ntotal:    %.3fms" transactTime updateTime totalTime
+        updater.Destroy()
+        appendCode (sprintf "adaptive %d" cnt) "initial: %.3fms\ntransact: %.3fms\nupdate:   %.3fms\ntotal:    %.3fms" initial transactTime updateTime totalTime
 
 
     open Elmish
     open Elmish.React
     open Fable.React
 
-    let runReact(cnt : int) =
-        let init _ = []
+    let runReact(cnt : int) (changes : int) =
+        let init _ = [1..cnt]
         let update _ m = m
-        let view _ _ = div [] [str "hey"]
+        let view m _ = ul [] (m |> List.map (fun e -> li [] [str (string e)]))
 
         let div = document.createElement "div"
         div.id <- "elmish-app"
         document.body.appendChild div |> ignore
 
-        Program.mkSimple init update view
-        |> Program.withConsoleTrace
-        |> Program.withReactBatched "elmish-app"
-        |> Program.run
+        let a = 
+            Program.mkSimple init update view
+            |> Program.withReactSynchronous "elmish-app"
+        
+        a |> Program.run
+
+       
+        let setState (l : list<int>) = a?setState l
+
+        let rand = System.Random()
+        let otherLists =
+            List.init changes (fun _ ->
+                let idx = rand.Next cnt
+                List.init idx (fun i -> i + 1) @
+                [123] @
+                List.init (cnt - idx - 1) (fun i -> idx + 2 + i)
+            )
+
+        let took = 
+            timed (fun () ->
+                for l in otherLists do
+                    setState l
+            )
+
+        appendCode (sprintf "react %d" cnt) "took: %.3fms" took
+        div.remove()
 
 
 let demo() =
@@ -204,7 +231,8 @@ let main argv =
         if document.readyState = "complete" then
             document.body?style?display <- "flex"
             document.body?style?flexWrap <- "wrap"
-            Benchmark.runReact 10
+            Benchmark.runReact 5000 100
+            Benchmark.runAdaptive 5000 100
             //for c in 100 .. 100 .. 5000 do
             //    Benchmark.runAdaptive c
 
