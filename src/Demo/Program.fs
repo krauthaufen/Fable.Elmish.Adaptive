@@ -88,10 +88,10 @@ module Benchmark =
             
         updater.Destroy()
         transact (fun () -> elements.Value <- list)
+        updater <- Updater.create root dummyScope view
         
         let initial = 
             timed (fun () ->
-                updater <- Updater.create root dummyScope view
                 updater.Update AdaptiveToken.Top
             )
 
@@ -113,7 +113,7 @@ module Benchmark =
             )
 
         updater.Destroy()
-        appendCode (sprintf "adaptive %d" cnt) "initial: %.3fms\ntransact: %.3fms\nupdate:   %.3fms\ntotal:    %.3fms" initial transactTime updateTime totalTime
+        appendCode (sprintf "adaptive %d/%d" cnt changes) "initial: %.3fms\ntransact: %.3fms\nupdate:   %.3fms\ntotal:    %.3fms" initial transactTime updateTime totalTime
 
 
     open Elmish
@@ -147,13 +147,24 @@ module Benchmark =
                 List.init (cnt - idx - 1) (fun i -> idx + 2 + i)
             )
 
+        // warmup
+        for i in Seq.truncate 10 otherLists do setState i
+        setState []
+
+
+        let data = init()
+
+        let initial =
+            timed (fun () -> setState data)
+
+
         let took = 
             timed (fun () ->
                 for l in otherLists do
                     setState l
             )
 
-        appendCode (sprintf "react %d" cnt) "took: %.3fms" took
+        appendCode (sprintf "react %d/%d" cnt changes) "initial: %.3fms\nupdate: %.3fms" initial took
         div.remove()
 
 
@@ -231,8 +242,10 @@ let main argv =
         if document.readyState = "complete" then
             document.body?style?display <- "flex"
             document.body?style?flexWrap <- "wrap"
-            Benchmark.runReact 5000 100
-            Benchmark.runAdaptive 5000 100
+
+            for c in 1000 .. 1000 .. 5000 do
+                Benchmark.runReact c 1
+                Benchmark.runAdaptive c 1
             //for c in 100 .. 100 .. 5000 do
             //    Benchmark.runAdaptive c
 
