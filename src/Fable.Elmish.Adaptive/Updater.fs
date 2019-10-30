@@ -117,7 +117,6 @@ module Updater =
 
         let update (ops : HashMapDelta<string, AttributeValue>) (s : Scope) =
             for (k, o) in ops do
-                console.warn(k, o)
                 match o with
                 | Remove ->
                     match listeners.TryGetValue k with
@@ -152,8 +151,6 @@ module Updater =
                             disposables
 
                         listeners.[k] <- n
-
-
 
         member x.Replace(newAttributes : AttributeMap, t : AdaptiveToken, s : Scope) =
             x.EvaluateAlways t (fun t ->

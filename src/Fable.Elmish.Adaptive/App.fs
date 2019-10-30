@@ -75,7 +75,6 @@ module App =
                     timeout <- null
 
                 let mine = pending
-                if mine.Count > 1 then Log.line "%d messages" mine.Count
                 pending <- System.Collections.Generic.List<'T>()
                 perform mine
 

@@ -130,38 +130,37 @@ module AttributeMapBuilder =
         
         member inline x.Yield(value : aval<option<string * string>>) =
             value 
-            |> AVal.map (function Some (name, value) -> [name, AttributeValue.String value] | None -> [])
+            |> AVal.map (function Some (name, value) -> HashMap.ofList [name, AttributeValue.String value] | None -> HashMap.empty)
             |> AMap.ofAVal
             |> AttributeMap
         
         member inline x.Yield(value : aval<option<string * EventDescription>>) =
             value 
-            |> AVal.map (function Some (name, value) -> [name, AttributeValue.Event [value]] | None -> [])
+            |> AVal.map (function Some (name, value) -> HashMap.ofList [name, AttributeValue.Event [value]] | None -> HashMap.empty)
             |> AMap.ofAVal
             |> AttributeMap
            
         member inline x.Yield(value : aval<option<string * AttributeValue>>) =
             value 
-            |> AVal.map (fun v -> console.error(v); v)
-            |> AVal.map (function Some (name, value) -> HashMap.ofList [name, value] | None -> HashMap.empty)
+            |> AVal.map (function Some (name, value) -> HashMap.single name value | None -> HashMap.empty)
             |> AMap.ofAVal
             |> AttributeMap
 
         member inline x.Yield(value : aval<string * string>) =
             value 
-            |> AVal.map (fun (name, value) -> [name, AttributeValue.String value])
+            |> AVal.map (fun (name, value) ->HashMap.ofList  [name, AttributeValue.String value])
             |> AMap.ofAVal
             |> AttributeMap
         
         member inline x.Yield(value : aval<string * EventDescription>) =
             value 
-            |> AVal.map (fun (name, value) -> [name, AttributeValue.Event [value]])
+            |> AVal.map (fun (name, value) -> HashMap.ofList [name, AttributeValue.Event [value]])
             |> AMap.ofAVal
             |> AttributeMap
         
         member inline x.Yield(value : aval<string * AttributeValue>) =
             value 
-            |> AVal.map (fun (name, value) -> [name, value])
+            |> AVal.map (fun (name, value) -> HashMap.ofList [name, value])
             |> AMap.ofAVal
             |> AttributeMap
         member inline x.Zero() =

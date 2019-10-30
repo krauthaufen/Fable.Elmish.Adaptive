@@ -271,7 +271,6 @@ let demo() =
 
             ul [] (
                 list |> AList.map (fun e ->
-                    console.warn e
                     li [] (string e)
                 )
             )
@@ -347,7 +346,6 @@ module SimpleApp =
 let main argv =
     document.addEventListener("readystatechange", fun _ ->
         if document.readyState = "complete" then
-            
             let d = App.run document.body None SimpleApp.app
             ()
             //Benchmark.test()
