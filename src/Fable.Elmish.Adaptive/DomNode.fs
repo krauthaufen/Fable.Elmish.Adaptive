@@ -42,6 +42,7 @@ and DomNode =
     | Inner of tag : Tag * attributes : AttributeMap * children : alist<DomNode>
     | Text of tag : Tag * attributes : AttributeMap * content : aval<string>
     | Void of tag : Tag * attributes : AttributeMap
+    | React of element : aval<Fable.React.ReactElement>
 
 module DomNode =
 
@@ -358,4 +359,11 @@ module Generic =
         let inline text props children = DomNode.generic { xmlns = Some "http://www.w3.org/2000/svg"; name = "text" } props children
         let inline tspan props children = DomNode.generic { xmlns = Some "http://www.w3.org/2000/svg"; name = "tspan" } props children
     
-    
+
+
+
+
+
+
+
+

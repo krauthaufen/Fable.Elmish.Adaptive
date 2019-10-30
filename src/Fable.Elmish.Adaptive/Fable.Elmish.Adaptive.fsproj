@@ -14,6 +14,7 @@
     <Compile Include="AttributeMap.fs" />
     <Compile Include="DomNode.fs" />
     <Compile Include="Updater.fs" />
+    <Compile Include="App.fs" />
   </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>

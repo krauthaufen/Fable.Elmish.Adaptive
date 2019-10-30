@@ -59,7 +59,7 @@ module Benchmark =
             document.body.appendChild quote |> ignore
         )
 
-    let runAdaptive(cnt : int) (changes : int) =
+    let runAdaptive(cnt : int) (changes : int) (changeSize : int) =
         let list = IndexList.ofList [ 1 .. cnt ]
         let elements = clist list
         let root = document.createElement "div"
@@ -68,7 +68,11 @@ module Benchmark =
         let view =
             ul [] (
                 elements |> AList.map (fun e ->
-                    li [] (string e)
+                    li [ clazz "yeah" ] [
+                        div [ clazz "test" ] [
+                            str (string e)
+                        ]
+                    ]
                 )
             )
 
@@ -97,7 +101,12 @@ module Benchmark =
 
 
         let rand = System.Random()
-        let indices = List.init changes (fun _ -> list.TryGetIndex(rand.Next(elements.Count)).Value)
+        let indices = 
+            List.init changes (fun _ -> 
+                List.init changeSize (fun _ ->
+                    list.TryGetIndex(rand.Next(elements.Count)).Value, rand.Next()
+                )
+            )
 
         let mutable updateTime = 0.0
         let mutable transactTime = 0.0
@@ -106,24 +115,77 @@ module Benchmark =
                 for i in indices do
                     transactTime <- transactTime +
                         timed (fun () ->
-                            transact (fun () -> elements.[i] <- 123)
+                            for (i,v) in i do
+                                transact (fun () -> elements.[i] <- v)
                         )
                     updateTime <- updateTime +
                         timed (fun () -> updater.Update AdaptiveToken.Top)
             )
 
         updater.Destroy()
-        appendCode (sprintf "adaptive %d/%d" cnt changes) "initial: %.3fms\ntransact: %.3fms\nupdate:   %.3fms\ntotal:    %.3fms" initial (transactTime / float changes) (updateTime / float changes) (totalTime / float changes)
+        appendCode (sprintf "adaptive %d/%d" cnt changeSize) "initial: %.3fms\ntransact: %.3fms\nupdate:   %.3fms\ntotal:    %.3fms" initial (transactTime / float changes) (updateTime / float changes) (totalTime / float changes)
 
 
     open Elmish
     open Elmish.React
     open Fable.React
+    open Fable.React.Props
 
-    let runReact(cnt : int) (changes : int) =
-        let init _ = [1..cnt]
+    type ReactUpdater(dst : Types.Element, ui : aval<ReactElement>) =
+        inherit AdaptiveObject()
+
+        member x.Update() = 
+            x.EvaluateAlways AdaptiveToken.Top (fun t ->
+                let ui = ui.GetValue t
+                ReactDom.render(ui, dst)
+            )
+
+        override x.MarkObject() =
+            setTimeout 0 x.Update
+            false
+
+
+    let test () =
+        let dst = document.createElement("div")
+        document.body.appendChild dst |> ignore
+
+        let cnt = cval 5
+        let click (e : Types.MouseEvent) =
+            transact (fun () ->
+                cnt.Value <- cnt.Value + 1
+            )
+            e.preventDefault()
+
+        let ui = 
+            cnt |> AVal.map (fun cnt ->
+                div [ Style [UserSelect UserSelectOptions.None]; OnClick click ] [
+                    str (sprintf "abc: %A" cnt)
+                ]
+            )
+
+        let updater = ReactUpdater(dst, ui)
+        updater.Update()
+
+
+
+
+    let runReact(cnt : int) (changes : int) (changeSize : int) =
+        let init _ = [1 .. cnt]
         let update _ m = m
-        let view m _ = ul [] (m |> List.map (fun e -> li [] [str (string e)]))
+
+        
+
+
+        let view m _ = 
+            ul [] (
+                m |> List.map (fun e -> 
+                    li [classList ["yeah", true] ] [ 
+                        div [classList ["test", true]] [
+                            str (string e)
+                        ] 
+                    ]
+                )
+            )
 
         let div = document.createElement "div"
         div.id <- "elmish-app"
@@ -138,13 +200,17 @@ module Benchmark =
        
         let setState (l : list<int>) = a?setState l
 
+        let set (i : int) (value : int) (l : list<int>) =
+            List.take i l @ [value] @ List.skip (i+1) l
+
         let rand = System.Random()
         let otherLists =
             List.init changes (fun _ ->
-                let idx = rand.Next cnt
-                List.init idx (fun i -> i + 1) @
-                [123] @
-                List.init (cnt - idx - 1) (fun i -> idx + 2 + i)
+                let mutable l = init()
+                for _ in 1 .. changeSize do
+                    let idx = rand.Next cnt
+                    l <- set idx (rand.Next()) l
+                l
             )
 
         // warmup
@@ -164,7 +230,7 @@ module Benchmark =
                     setState l
             )
 
-        appendCode (sprintf "react %d/%d" cnt changes) "initial: %.3fms\nupdate: %.3fms" initial (took / float changes)
+        appendCode (sprintf "react %d/%d" cnt changeSize) "initial: %.3fms\nupdate: %.3fms" initial (took / float changes)
         div.remove()
 
 
@@ -236,16 +302,66 @@ let demo() =
 
 
 
+module SimpleApp =
+    
+    type Message =
+        | Increment 
+        | Decrement
+
+    let init() =
+        0
+        
+    let update (model : int) (message : Message) =
+        match message with
+        | Increment -> model + 1
+        | Decrement -> model - 1
+
+    let view (model : aval<int>) (emit : Message -> unit) =
+        let headerAtttributes =
+            att {
+                model |> AVal.map (fun v ->
+                    if v < 0 then style "color: red" |> Some
+                    elif v > 0 then style "color: darkgreen" |> Some
+                    else None
+                )
+            }
+        div [] [
+            h3 headerAtttributes "Simple Counter"
+            str (AVal.map string model)
+            br []
+            button [click (fun () -> emit Increment)] "+"
+            button [click (fun () -> emit Decrement)] "-"
+        ]
+
+    let app =
+        {
+            init = init
+            update = update
+            view = view
+            unpersist = Unpersist.value
+        }
+
+
+
 [<EntryPoint>] 
 let main argv =
     document.addEventListener("readystatechange", fun _ ->
         if document.readyState = "complete" then
-            document.body?style?display <- "flex"
-            document.body?style?flexWrap <- "wrap"
+            
+            let d = App.run document.body None SimpleApp.app
+            ()
+            //Benchmark.test()
+            //document.body?style?display <- "flex"
+            //document.body?style?flexWrap <- "wrap"
 
-            for c in 1000 .. 1000 .. 5000 do
-                Benchmark.runReact c 50
-                Benchmark.runAdaptive c 50
+            //let changeSize = 200
+            //for size in [1000;5000;10000] do
+            //    Benchmark.runReact size 1 150
+            //    Benchmark.runAdaptive size 1 150
+
+            //for c in 1000 .. 1000 .. 5000 do
+            //    //Benchmark.runReact c 50
+            //    Benchmark.runAdaptive c 50 1
             //for c in 100 .. 100 .. 5000 do
             //    Benchmark.runAdaptive c
 

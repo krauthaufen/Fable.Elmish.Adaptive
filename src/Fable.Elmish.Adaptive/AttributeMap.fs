@@ -142,7 +142,8 @@ module AttributeMapBuilder =
            
         member inline x.Yield(value : aval<option<string * AttributeValue>>) =
             value 
-            |> AVal.map (function Some (name, value) -> [name, value] | None -> [])
+            |> AVal.map (fun v -> console.error(v); v)
+            |> AVal.map (function Some (name, value) -> HashMap.ofList [name, value] | None -> HashMap.empty)
             |> AMap.ofAVal
             |> AttributeMap
 

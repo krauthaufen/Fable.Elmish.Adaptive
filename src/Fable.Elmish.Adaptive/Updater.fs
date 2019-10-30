@@ -73,6 +73,7 @@ module Updater =
             | DomNode.Text(a,b,c) -> TextUpdater(scope, createNode(a), a, b, c) :> NodeUpdater
             | DomNode.Inner(a,b,c) -> InnerNodeUpdater(scope, createNode(a), a, b, c) :> NodeUpdater
             | DomNode.Void(a,b) -> TextUpdater(scope, createNode(a), a, b, AVal.constant "") :> NodeUpdater
+            | DomNode.React c -> ReactUpdater(scope, createNode, c) :> NodeUpdater
 
         static member Create(parent : HTMLElement, scope : Scope, n : DomNode) =
             let createNode (tag : Tag) =
@@ -116,6 +117,7 @@ module Updater =
 
         let update (ops : HashMapDelta<string, AttributeValue>) (s : Scope) =
             for (k, o) in ops do
+                console.warn(k, o)
                 match o with
                 | Remove ->
                     match listeners.TryGetValue k with
@@ -362,6 +364,41 @@ module Updater =
                 )
             | _ ->
                 false
+
+    and ReactUpdater(scope : Scope, createNode : Tag -> HTMLElement, element : aval<Fable.React.ReactElement>) =
+        inherit NodeUpdater(scope)
+
+        let mutable element = element
+        let mutable node = null
+
+        let performUpdate (t : AdaptiveToken) =
+            let element = element.GetValue t
+            if isNull node then
+                node <- createNode { xmlns = None; name = "span" }
+
+            Fable.React.ReactDomBindings.ReactDom.render(element, node)
+
+        override x.Node = node
+
+        override x.Kill()  =
+            if not (isNull node) then
+                Fable.React.ReactDomBindings.ReactDom.unmountComponentAtNode node |> ignore
+                node.remove()
+                node <- null
+            ()
+
+        override x.TryReplace(t : AdaptiveToken, o : DomNode) =
+            match o with
+            | DomNode.React e ->
+                element.Outputs.Remove x |> ignore
+                element <- e
+                performUpdate t
+                true
+            | _ -> 
+                false
+
+        override x.Compute(t : AdaptiveToken) = 
+            performUpdate t
 
  
     let create (parent : HTMLElement) (scope : Scope) (node : DomNode) =

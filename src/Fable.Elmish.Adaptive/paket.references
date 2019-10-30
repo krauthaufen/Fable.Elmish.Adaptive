@@ -2,3 +2,4 @@ FSharp.Core
 Fable.Core
 Fable.Browser.Dom
 FSharp.Data.Adaptive
+Fable.Elmish.React
