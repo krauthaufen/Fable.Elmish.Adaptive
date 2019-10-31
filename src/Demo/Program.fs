@@ -9,6 +9,39 @@ open FSharp.Data.Adaptive
 open Fable.Elmish.Adaptive
 open Fable.Elmish.Adaptive.Generic
 
+[<AutoOpen>]
+module private WeakTableHelpers =
+    open Fable.Core
+    open Fable.Core.JsInterop
+
+    type [<AllowNullLiteral>] WeakMap<'K, 'V> =
+        abstract clear: unit -> unit
+        abstract delete: key: 'K -> bool
+        abstract get: key: 'K -> 'V
+        abstract has: key: 'K -> bool
+        abstract set: key: 'K * ?value: 'V -> WeakMap<'K, 'V>
+
+    and [<AllowNullLiteral>] WeakMapConstructor =
+        [<Emit("new $0($1...)")>] abstract Create: ?iterable: seq<'K * 'V> -> WeakMap<'K, 'V>
+
+    let [<Global>] WeakMap: WeakMapConstructor = jsNative
+
+type ConditionalWeakTable<'K, 'V when 'K : not struct and 'V : not struct>() =
+    
+    let m = WeakMap.Create<'K, 'V> []
+
+    member x.TryGetValue(key : 'K) =
+        if m.has key then (true, m.get key)
+        else (false, Unchecked.defaultof<_>)
+
+    member x.Add(key : 'K, value : 'V) =
+        m.set(key, value) |> ignore
+
+    member x.Remove(key : 'K) =
+        m.delete key
+
+
+
 module Test =
     
     let test (elements : alist<string>) =
@@ -144,140 +177,40 @@ module Benchmark =
             setTimeout 0 x.Update
             false
 
-    type EmptyOutputSet() =
-        static let emptyArray : IAdaptiveObject[] = Array.zeroCreate 0
-        interface IWeakOutputSet with
-            member x.IsEmpty = true
-            member x.Add _ = false
-            member x.Remove _ = false
-            member x.Consume() = emptyArray
-    
-
-    type CallbackObject(obj: IAdaptiveObject, callback: CallbackObject -> unit) =
-        static let emptyOutputs = EmptyOutputSet() :> IWeakOutputSet
-        let mutable level = obj.Level + 1
-        let mutable live = 1
-        let mutable obj = obj
-        let mutable weak = null
-
-        member x.Mark() =
-            if live > 0 then callback x
-            false
-
-        member x.Dispose() =
-            let l = live
-            live <- 0
-            if l = 1 then
-                obj.Outputs.Remove x |> ignore
-                obj <- Unchecked.defaultof<_>
-                weak <- null
-                level <- 0
-
-        interface IDisposable with
-            member x.Dispose() = x.Dispose()
-
-        interface IAdaptiveObject with
-            member x.Tag
-                with get() = null
-                and set _ = ()
-
-            member x.Weak =
-                let w = weak
-                if isNull w then 
-                    let w = WeakReference<IAdaptiveObject>(x)
-                    weak <- w
-                    w
-                else
-                    w
-            member x.InputChanged(_,_) = ()
-            member x.AllInputsProcessed(_) = ()
-            member x.IsConstant = false
-            member x.OutOfDate
-                with get() = false
-                and set _ = ()
-            member x.Outputs = emptyOutputs
-            member x.Mark() = x.Mark()
-            member x.Level
-                with get() = level
-                and set l = level <- l
-    
-    type IAdaptiveObject with
-        /// Registers a callback with the given object that will be executed
-        /// whenever the object gets marked out-of-date.
-        /// Note that it does not trigger when the object is currently out-of-date.
-        /// Returns a disposable for removing the callback.
-        member x.AddMarkingCallbackLocal (callback: unit -> unit) =
-            let cb =
-                new CallbackObject(x, fun self ->
-                    try callback ()
-                    finally x.Outputs.Add self |> ignore
-                )
-
-            x.Outputs.Add cb |> ignore
-            cb :> IDisposable
-
-    module Sepp =
-
-        let useAdaptive (v: aval<'T>) =
-            // initialize hook with initial value
-            let stateHook = 
-                Hooks.useStateLazy (fun () -> AVal.force v)
-
-            let onChange () =
-                Log.line "before change"
-                // tell the hook that our value had changed
-                stateHook.update (fun _ -> AVal.force v)
-                Log.line "after change"
-
-            let marking = 
-                v.AddMarkingCallbackLocal onChange
-
-            Hooks.useEffectDisposable (fun () -> marking)
-
-            stateHook.current 
-
 
     let test () =
-        //let test : {| a : int |} = {| a = 10 |}
-        let myComp =
-            FunctionComponent.Of (fun (v : {| value : aval<int> |}) ->    
-                let vv = Sepp.useAdaptive v.value
-                div [] [
-                    str (string (vv))
-                ]
+        let counterValue =
+            let create (v : {| value : aval<int> |}) =   
+                let value = Hooks.useAdaptive v.value
+                div [ if value > 4 then Style [Color "red"] ] [
+                    str (string value)
+                ] 
+            FunctionComponent.Of(
+                create, 
+                displayName = "CounterComponent"
             )
-
-        let cnt = cval 5
-        let click (e : Types.MouseEvent) =
+            
+        let click (cnt : cval<int>) (e : Types.MouseEvent) =
             transact (fun () ->
                 cnt.Value <- cnt.Value + 1
             )
-            e.preventDefault()
-
-
-        let mm = cnt |> AVal.map (fun v -> printfn "eval"; v)
+      
+        let foo = cval 0
+        let bar = cval 1
 
         let ui = 
             div [ ] [
-                ofFunction myComp {| value = mm |} []
-                button [OnClick click] [ str "Yeah" ]
-            ] |> AVal.constant
-            //myComp cnt () |> AVal.constant
-            //cnt |> AVal.map (fun cnt ->
-            //    div [ Style [UserSelect UserSelectOptions.None]; OnClick click ] [
-            //        str (sprintf "abc: %A" cnt)
-            //    ]
-            //)
+                counterValue {| value = foo |}
+                button [OnClick (click foo)] [ str "Foo" ]
+                counterValue {| value = bar |}
+                button [OnClick (click bar)] [ str "Bar" ]
+            ]
 
-       
-       
+
         let dst = document.createElement("div")
         document.body.appendChild dst |> ignore
-
-        let updater = ReactUpdater(dst, ui)
+        let updater = ReactUpdater(dst, AVal.constant ui)
         updater.Update()
-
-
 
 
     let runReact(cnt : int) (changes : int) (changeSize : int) =

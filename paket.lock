@@ -40,7 +40,7 @@ NUGET
       Fable.Core (>= 3.0)
       FSharp.Core (>= 4.7)
     FSharp.Core (4.7)
-    FSharp.Data.Adaptive (0.0.5-prerelease04)
+    FSharp.Data.Adaptive (0.0.5-prerelease06)
       FSharp.Core (>= 4.6.2)
 
 GROUP Build
