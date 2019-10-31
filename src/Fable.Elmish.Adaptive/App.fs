@@ -43,6 +43,13 @@ module Unpersist =
             update = fun t v -> (unbox<clist<'a>> t).Value <- v
         }
 
+    [<GeneralizableValue>]
+    let map<'k, 'v> : Unpersist<HashMap<'k, 'v>, amap<'k, 'v>> =
+        {
+            create = fun v -> cmap v :> amap<'k, 'v>
+            update = fun t v -> (unbox<cmap<'k, 'v>> t).Value <- v
+        }
+
 type App<'Model, 'AdaptiveModel, 'Message> =
     {
         init        : unit -> 'Model

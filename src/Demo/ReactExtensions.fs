@@ -1,4 +1,5 @@
-﻿namespace Fable.React
+﻿namespace React.Adaptive
+
 open FSharp.Data.Adaptive
 
 open Fable.React
