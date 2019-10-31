@@ -13,6 +13,7 @@ let randomString() =
     let c = rand.Next(26) + int 'A' |> char
     System.String [|c|]
 
+
 let run() =
 
     let initial = IndexList.ofList ["a"; "b"; "c"]
@@ -41,7 +42,12 @@ let run() =
                 
             aol (
                 list |> AList.map (fun text ->
-                    li [] [str text]
+                    console.log("create node", text)
+                    li [Style [FontFamily "monospace"]] [
+                        DebugComponents.withLogging (
+                            div [Style [Color "darkred"]] [str text] 
+                        )
+                    ]
                 )
             )
         ]
