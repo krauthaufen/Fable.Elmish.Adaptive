@@ -30,6 +30,13 @@ let run() =
             let id = random.Next list.Count
             list.InsertAt(id, randomString()) |> ignore
         )
+        
+    // callback changing an element at a random position in the list
+    let change _ =
+        transact (fun () ->
+            let id = list.Value.TryGetIndex (random.Next list.Count) |> Option.get
+            list.[id] <- randomString()
+        )
 
     // callback appending a new string to the list
     let append _ =
@@ -49,33 +56,75 @@ let run() =
             list.Value <- initial
         )
 
+    let tag = cval "ul"
+    
+        
+    // callback resetting the list to the initial content
+    let changeType _ =
+        transact (fun () ->
+            match tag.Value with
+            | "ul" -> tag.Value <- "ol"
+            | _ -> tag.Value <- "ul"
+        )
+
+    
+
     let ui = 
-        div [ ] [
+        div [ ] [ 
             // some buttons for changing the list
             button [OnClick prepend] [ str "Prepend"]
             button [OnClick insert] [ str "Insert"]
             button [OnClick append] [ str "Append"]
+            button [OnClick change] [ str "Change"]
             button [OnClick clear] [ str "Reset"]
+            button [OnClick changeType] [ str "Change Type"]
               
-            // we simply use the `aul` component here (short for adaptive-ul)
-            // that uses the alist-changes to update the dom accordingly without
-            // using react's reconciler for updating the list.
-            // NOTE that the current implementation cannot handle any HTML attributes
-            //      but we plan to support these too as the library evolves...
-            aul (
+
+
+            let children =
                 list |> AList.map (fun text ->
                     // for illustration purposes we log various actions here.
-                    console.log("create node", text)
+                    console.log("create: ", text)
 
                     // DebugComponents.withLogging just adds proper logging to
                     // `componentDidMount`, `componentWillMount`, etc. for validation purposes.
                     li [Style [FontFamily "monospace"]] [
-                        DebugComponents.withLogging (
-                            div [Style [Color "darkred"]] [str text] 
-                        )
+                        div [Style [Color "darkred"]] [str text]
+                        |> DebugComponents.withLogging text
                     ]
                 )
-            )
-        ]
 
-    ReactDom.render(ui, document.body)
+            // we use the generic adaptiveNode here that allows changing the tag
+            // and internally handles alist-changes to update the dom accordingly without
+            // using react's reconciler.
+            // NOTE that the current implementation cannot handle any HTML attributes
+            //      but we plan to support these too as the library evolves...
+            let changeable = 
+                FunctionComponent.Of (fun () ->
+                    let tag = Hooks.useAdaptive tag
+                    adaptiveNode tag children
+                )
+
+            changeable ()
+
+
+            // here's a simpler variant not using the changeable tag
+
+            //aol (
+            //    list |> AList.map (fun text ->
+            //        // for illustration purposes we log various actions here.
+            //        console.log("create: ", text)
+
+            //        // DebugComponents.withLogging just adds proper logging to
+            //        // `componentDidMount`, `componentWillMount`, etc. for validation purposes.
+            //        li [Style [FontFamily "monospace"]] [
+            //            div [Style [Color "darkred"]] [str text]
+            //            |> DebugComponents.withLogging text
+            //        ]
+            //    )
+            //)
+        ]
+       
+    let root = document.createElement "div"
+    document.body.appendChild root |> ignore
+    ReactDom.render(ui, root)
