@@ -7,7 +7,7 @@ open Fable.Core.JsInterop
 open FSharp.Data.Adaptive
 open Fable.Elmish.Adaptive
 open Fable.Elmish.Adaptive.Generic
-open React.Adaptive
+open Fable.React.Adaptive
 
 
 [<Emit("setTimeout($1, $0)")>]

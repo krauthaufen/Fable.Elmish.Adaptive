@@ -3,7 +3,7 @@
 open System
 open Browser
 open FSharp.Data.Adaptive
-open React.Adaptive
+open Fable.React.Adaptive
 open Fable.React
 open Fable.React.Props
 
@@ -90,7 +90,7 @@ let run() =
                     // `componentDidMount`, `componentWillMount`, etc. for validation purposes.
                     li [Style [FontFamily "monospace"]] [
                         div [Style [Color "darkred"]] [str text]
-                        |> DebugComponents.withLogging text
+                        |> withLogging text
                     ]
                 )
 
@@ -102,7 +102,7 @@ let run() =
             let changeable = 
                 FunctionComponent.Of (fun () ->
                     let tag = Hooks.useAdaptive tag
-                    adaptiveNode tag children
+                    AListComponent.ofAlist tag children
                 )
 
             changeable ()

@@ -1,4 +1,4 @@
-﻿namespace React.Adaptive
+﻿namespace Fable.React.Adaptive
 
 open System
 open Browser
@@ -8,14 +8,7 @@ open Fable.React
 open Fable.React.ReactiveComponents
 open Fable.React.Props
 open FSharp.Data.Adaptive
-open Fable.Core.JsInterop
 
-module private Helpers =
-    let inline setDisplayName<'comp, 'props, 'state when 'comp :> Component<'props, 'state>> (name : string) =
-        let t = Fable.React.ReactElementType.ofComponent<'comp, 'props, 'state>
-        t?displayName <- name
-
-    
 type internal AListComponentProps =
     {   
         tag         : string
@@ -145,7 +138,7 @@ type internal AListComponentState(tag : string, children : alist<ReactElement>) 
 
 type internal AListComponent(a : AListComponentProps)  =
     inherit Fable.React.Component<AListComponentProps, State<AListComponentState>>(a) 
-    static do Helpers.setDisplayName<AListComponent,_,_> "AList"
+    static do ComponentHelpers.setDisplayName<AListComponent,_,_> "AList"
     do base.setInitState({ value = AListComponentState(a.tag, a.children) })
        
     member x.state = 
@@ -171,59 +164,8 @@ type internal AListComponent(a : AListComponentProps)  =
         )
           
 
-        
-[<AutoOpen>]
-module AdaptiveTags =
-
-    let adaptiveNode (tag : string) (children : alist<ReactElement>) = 
+module AListComponent =
+    let ofAlist (tag : string) (children : alist<ReactElement>) =
         let typ = Fable.React.ReactElementType.ofComponent<AListComponent,_,_>
         Fable.React.ReactElementType.create typ { tag = tag; children = children } []
-
-    let adiv c = adaptiveNode "div" c
-    let aol c = adaptiveNode "ol" c
-    let aul c = adaptiveNode "ul" c
-
-
-
-module DebugComponents = 
-    open Fable.React
-    open Fable.Core.JsInterop
-    open Fable.React.ReactiveComponents
-
-    type LogComponent(value : State<string * ReactElement>) =
-        inherit Component<State<string * ReactElement>, State<string * ReactElement>>(value)
-        static do Helpers.setDisplayName<LogComponent,_,_> "Log"
-        do base.setInitState { value = value.value }
-
-        override x.componentWillUnmount() =
-            let (name, _) = x.state.value
-            console.log(name, "will unmount")
-
-        override x.componentDidMount() =
-            let (name, _) = x.state.value
-            console.log(name, "did mount")
-
-        override x.componentDidUpdate(_, _) =
-            let (name, _) = x.state.value
-            if x.state.value <> x.props.value then
-                x.setState(fun _ _ -> { value = x.props.value })
-            console.log(name, "did update")
-            
-
-        override x.componentDidCatch(e, info) =
-            let (name, _) = x.state.value
-            console.log(name, "did catch", e, info)
-            
-        override x.shouldComponentUpdate(np, ns) =
-            let (name, _) = x.state.value
-            console.log(name, "should update")
-            true
-
-        override x.render() =
-            let (name, content) = x.state.value
-            console.log(name, "render")
-            content
-            
-    let withLogging name content = 
-        ofType<LogComponent, _, _> { value = (sprintf "%s: " name, content) } []
-
+        
