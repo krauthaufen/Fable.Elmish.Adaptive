@@ -9,6 +9,7 @@ nuget FSharp.Data.Adaptive                  ~> 0.0.5-prerelease06
 nuget Adaptify.MSBuild                      ~> 0.0.1
 nuget Fable.Core                            ~> 3.1.1
 nuget Fable.Browser.Dom                     ~> 1.1.0
+nuget Fable.Promise                         ~> 2.0.0
 
 nuget Elmish
 nuget Fable.Elmish.React                    ~> 3.0.1

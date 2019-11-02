@@ -9,6 +9,68 @@ open Fable.React.ReactiveComponents
 open Fable.React.Props
 open FSharp.Data.Adaptive
 
+
+
+type internal ReactRenderedElement(insert : Types.Element -> JS.Promise<unit>, remove : Types.Element -> unit) =
+    let stub = document.createElement "span"
+    let dst = document.createElement "span"
+
+    let setElement, element =
+        let mutable success = Unchecked.defaultof<_>
+        let res = Promise.create (fun s _ -> success <- s)
+        success, res
+
+
+    let mutable real : Option<Types.Element> = None
+    let mutable last : Option<JS.Promise<unit>> = None
+
+    let run (action : unit -> JS.Promise<'a>) =
+        match last with
+        | Some l ->
+            let res = l |> Promise.bind action
+            last <- Some (unbox res)
+            res
+        | None ->
+            let res = action()
+            last <- Some (unbox res)
+            res
+
+    member x.Element = element
+
+    member x.Render(ui : ReactElement) =
+        run (fun () ->
+            Promise.create (fun success _error ->
+                ReactDom.render(ReactDom.createPortal(ui, dst), stub, fun () ->
+                    match real with
+                    | Some real ->
+                        success real
+
+                    | None -> 
+                        let e = unbox dst.firstChild
+                        insert(e).``then`` (fun () ->
+                            real <- Some e
+                            setElement e
+                            success e
+                        ) |> ignore
+                )
+            )
+        )
+
+    member x.Unmount() =
+        run (fun () ->
+            Promise.create (fun success _error ->
+                match real with
+                | Some r ->
+                    remove r
+                    dst.appendChild r |> ignore
+                    ReactDom.unmountComponentAtNode stub |> success
+                | None ->
+                    success false
+
+                real <- None
+            )
+        )
+
 type internal AListComponentProps =
     {   
         tag         : string
@@ -25,7 +87,7 @@ type internal AListComponentState(tag : string, children : alist<ReactElement>) 
     let mutable parent : Types.Element = null
     let mutable reader : Option<IIndexListReader<ReactElement>> = None
     let mutable marking = noDisposable
-    let mutable cache : IndexList<Types.HTMLElement * Types.Element> = IndexList.empty
+    let mutable cache : IndexList<ReactRenderedElement> = IndexList.empty
 
     let getReader(callback : unit -> unit) =
         match reader with
@@ -40,45 +102,46 @@ type internal AListComponentState(tag : string, children : alist<ReactElement>) 
         for (index, op) in IndexListDelta.toSeq deltas do
             match op with
             | Set react ->  
-                let tag = "span"
                 let (_l, self, right) = IndexList.neighbours index cache
                 match self with
-                | Some (_, (dst, a)) -> 
-                    ReactDom.render(react, dst)
+                | Some (_, dst) -> 
+                    dst.Render(react) |> ignore
 
                 | None ->
                     match right with
-                    | Some (_ri, (_rep, re)) ->
-                        let dummy = document.createElement tag
-                        element.insertBefore(dummy, re) |> ignore
-                        cache <- IndexList.set index (dummy, dummy :> _) cache
-                        ReactDom.render(react, dummy)
-                        //ReactDom.render(react, dummy, fun () ->
-                        //    let actual = dummy :> Types.Element //if dummy.children.length = 1 then dummy.children.[0] else dummy :> _
-                        //    element.insertBefore(actual, re) |> ignore
-                        //    cache <- IndexList.set index (dummy, actual) cache
-                        //)
+                    | Some (_ri, re) ->
+                        let insert (e : Types.Element) =
+                            re.Element |> Promise.map (fun re ->
+                                element.insertBefore(e, re) |> ignore
+                            )
+
+                        let remove (e : Types.Element) =
+                            e.remove()
+
+                        let element = ReactRenderedElement(insert, remove)
+                        element.Render(react) |> ignore
+                        cache <- IndexList.set index element cache
+
                     | None ->
-                        let dummy = document.createElement tag
-                        element.appendChild(dummy) |> ignore
-                        cache <- IndexList.set index (dummy, dummy :> _) cache
-                        ReactDom.render(react, dummy)
-                        //ReactDom.render(react, dummy, fun () ->
-                        //    let actual = dummy :> Types.Element//if dummy.children.length = 1 then dummy.children.[0] else dummy :> _
-                        //    element.appendChild(actual) |> ignore
-                        //    cache <- IndexList.set index (dummy, actual) cache
-                        //)
+                        
+                        let insert (e : Types.Element) =
+                            promise {
+                                element.appendChild(e) |> ignore
+                            }
+
+                        let remove (e : Types.Element) =
+                            e.remove()
+
+                        let element = ReactRenderedElement(insert, remove)
+                        element.Render(react) |> ignore
+                        cache <- IndexList.set index element cache
 
             | Remove ->
                 match IndexList.tryRemove index cache with
-                | Some ((dummy, actual), rest) ->
+                | Some (root, rest) ->
                     cache <- rest
-                    if (dummy :> Types.Element) <> actual then
-                        actual.remove()
-                        dummy.appendChild actual |> ignore
-                    let worked = ReactDom.unmountComponentAtNode dummy 
-                    if not worked then
-                        console.warn("could not unmount", dummy)
+                    root.Unmount() |> ignore
+
                 | None ->
                     ()
 
@@ -100,9 +163,13 @@ type internal AListComponentState(tag : string, children : alist<ReactElement>) 
         elif isNull e then
             ()
         else
-            for (r, _) in cache do
-               e.appendChild r |> ignore
-                
+            promise {
+                for r in cache do
+                    let! c = r.Element
+                    e.appendChild c |> ignore
+                    ()
+            } |> ignore
+
             tag <- e.tagName.ToLower()
             element <- e
             parent <- e.parentElement
