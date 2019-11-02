@@ -232,7 +232,7 @@ type internal AListComponent(a : AListComponentProps)  =
           
 
 module AListComponent =
-    let ofAlist (tag : string) (children : alist<ReactElement>) =
+    let ofAList (tag : string) (children : alist<ReactElement>) =
         let typ = Fable.React.ReactElementType.ofComponent<AListComponent,_,_>
         Fable.React.ReactElementType.create typ { tag = tag; children = children } []
         

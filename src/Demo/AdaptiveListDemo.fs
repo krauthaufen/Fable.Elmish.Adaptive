@@ -9,7 +9,7 @@ open Fable.React.Props
 
 let random = Random()
 
-// simple utility for creating random strings
+// simple utility for creating random strings.
 let randomString() =
     let randomChar() = 
         if random.Next 2 = 0 then random.Next(26) + int 'A' |> char
@@ -20,46 +20,50 @@ let randomString() =
 
 let run() =
 
-    // create a changeable list with our initial content
+    // create a changeable list with our initial content.
     let initial = IndexList.ofList ["a"; "b"; "c"]
     let list = clist initial
 
-    // callback inserting a new string at a random position in the list
+    // the changeable tag for the list.
+    let tag = cval "ul"
+
+    // callback inserting a new string at a random position in the list.
     let insert _ =
         transact (fun () ->
             let id = random.Next list.Count
             list.InsertAt(id, randomString()) |> ignore
         )
         
-    // callback changing an element at a random position in the list
+    // callback changing an element at a random position in the list.
     let change _ =
         transact (fun () ->
+            // There is a `clist` bug (already resolved but not packaged yet) in
+            // list.[random.Next list.Count] <- randomString()
+
+            // workaround:
             let id = list.Value.TryGetIndex (random.Next list.Count) |> Option.get
             list.[id] <- randomString()
         )
 
-    // callback appending a new string to the list
+    // callback appending a new string to the list.
     let append _ =
         transact (fun () ->
             list.Append (randomString()) |> ignore
         )
         
-    // callback prepending a new string to the list
+    // callback prepending a new string to the list.
     let prepend _ =
         transact (fun () ->
             list.Prepend (randomString()) |> ignore
         )
         
-    // callback resetting the list to the initial content
+    // callback resetting the list to the initial content.
     let clear _ =
         transact (fun () ->
             list.Value <- initial
         )
 
-    let tag = cval "ul"
-    
-        
-    // callback resetting the list to the initial content
+    // callback changing the tag from ul to ol and vice versa.
     let changeType _ =
         transact (fun () ->
             match tag.Value with
@@ -83,10 +87,7 @@ let run() =
 
             let children =
                 list |> AList.map (fun text ->
-                    // for illustration purposes we log various actions here.
-                    console.log("create: ", text)
-
-                    // DebugComponents.withLogging just adds proper logging to
+                    // withLogging just adds some logging to the given Element hooking
                     // `componentDidMount`, `componentWillMount`, etc. for validation purposes.
                     li [Style [FontFamily "monospace"]] [
                         div [Style [Color "darkred"]] [str text]
@@ -94,32 +95,28 @@ let run() =
                     ]
                 )
 
-            // we use the generic adaptiveNode here that allows changing the tag
+            // we use the generic AListComponent.ofAList here that allows changing the tag
             // and internally handles alist-changes to update the dom accordingly without
-            // using react's reconciler.
+            // using reacts reconciler.
             // NOTE that the current implementation cannot handle any HTML attributes
             //      but we plan to support these too as the library evolves...
-            let changeable = 
+            let element = 
                 FunctionComponent.Of (fun () ->
                     let tag = Hooks.useAdaptive tag
-                    AListComponent.ofAlist tag children
+                    AListComponent.ofAList tag children
                 )
 
-            changeable ()
+            element ()
 
 
             // here's a simpler variant not using the changeable tag
-
             //aol (
             //    list |> AList.map (fun text ->
-            //        // for illustration purposes we log various actions here.
-            //        console.log("create: ", text)
-
-            //        // DebugComponents.withLogging just adds proper logging to
+            //        // withLogging just adds some logging to the given Element hooking
             //        // `componentDidMount`, `componentWillMount`, etc. for validation purposes.
             //        li [Style [FontFamily "monospace"]] [
             //            div [Style [Color "darkred"]] [str text]
-            //            |> DebugComponents.withLogging text
+            //            |> withLogging text
             //        ]
             //    )
             //)
