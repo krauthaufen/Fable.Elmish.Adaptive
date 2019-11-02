@@ -46,28 +46,44 @@ type internal ReactRenderedElement(insert : Types.Element -> JS.Promise<unit>, r
                         success real
 
                     | None -> 
-                        let e = unbox dst.firstChild
-                        insert(e).``then`` (fun () ->
-                            real <- Some e
-                            setElement e
-                            success e
-                        ) |> ignore
+                        if dst.children.length = 1 then
+                            let e = unbox dst.firstChild
+                            insert(e).``then`` (fun () ->
+                                real <- Some e
+                                setElement e
+                                success e
+                            ) |> ignore
+                        else
+                            insert(dst).``then``(fun () ->
+                                real <- Some (dst :> Types.Element)
+                                setElement dst
+                                success dst
+                            ) |> ignore
                 )
+
             )
         )
 
     member x.Unmount() =
         run (fun () ->
-            Promise.create (fun success _error ->
+            Promise.create (fun success _error ->   
+                let mutable res = false
                 match real with
                 | Some r ->
-                    remove r
-                    dst.appendChild r |> ignore
-                    ReactDom.unmountComponentAtNode stub |> success
+                    let de = dst :> Types.Element
+                    if de <> r then
+                        remove r
+                        dst.appendChild r |> ignore
+                        res <- ReactDom.unmountComponentAtNode stub
+                    else
+                        res <- ReactDom.unmountComponentAtNode stub
+                        remove dst
+                        
                 | None ->
-                    success false
+                    ()
 
                 real <- None
+                success res
             )
         )
 
