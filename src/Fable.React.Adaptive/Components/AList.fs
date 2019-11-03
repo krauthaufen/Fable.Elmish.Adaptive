@@ -10,81 +10,74 @@ open Fable.React.Props
 open FSharp.Data.Adaptive
 
 
+type internal ReactPseudoParent() =
+    [<Emit("Object.defineProperty($0, $1, { get: $2 })")>]
+    static let defineProperty (o : obj) (name : string) (getter : unit -> 'a) : unit = jsNative
 
-type internal ReactRenderedElement(insert : Types.Element -> JS.Promise<unit>, remove : Types.Element -> unit) =
-    let stub = document.createElement "span"
-    let dst = document.createElement "span"
+    let e = document.createElement("div")
+    let mutable child : Types.Node = null
+    let mutable latestOperation : option<JS.Promise<unit>> = None
 
-    let setElement, element =
-        let mutable success = Unchecked.defaultof<_>
-        let res = Promise.create (fun s _ -> success <- s)
-        success, res
-
-
-    let mutable real : Option<Types.Element> = None
-    let mutable last : Option<JS.Promise<unit>> = None
-
-    let run (action : unit -> JS.Promise<'a>) =
-        match last with
-        | Some l ->
-            let res = l |> Promise.bind action
-            last <- Some (unbox res)
+    let run (render : ('a -> unit) -> (exn -> unit) -> unit) =
+        match latestOperation with
+        | Some r ->
+            let res = r |> Promise.bind (fun () -> Promise.create render)
+            latestOperation <- Some (unbox res)
             res
         | None ->
-            let res = action()
-            last <- Some (unbox res)
+            let res = Promise.create render
+            latestOperation <- Some (unbox res)
             res
 
-    member x.Element = element
+    do  
+        // fake firstChild (used by react interally)
+        defineProperty e "firstChild" (fun () -> child)
 
-    member x.Render(ui : ReactElement) =
-        run (fun () ->
-            Promise.create (fun success _error ->
-                ReactDom.render(ReactDom.createPortal(ui, dst), stub, fun () ->
-                    match real with
-                    | Some real ->
-                        success real
+        // fake appendChild (setting our one and only child)
+        e?appendChild <- fun (n : Types.Node) ->
+            child <- n
+            defineProperty n "parentNode" (fun () -> e)
 
-                    | None -> 
-                        if dst.children.length = 1 then
-                            let e = unbox dst.firstChild
-                            insert(e).``then`` (fun () ->
-                                real <- Some e
-                                setElement e
-                                success e
-                            ) |> ignore
-                        else
-                            insert(dst).``then``(fun () ->
-                                real <- Some (dst :> Types.Element)
-                                setElement dst
-                                success dst
-                            ) |> ignore
-                )
+            //let getter = n?__proto__?__lookupGetter__("parentNode")
+            //defineProperty n "realParentNode" (fun () ->
+            //    getter?call(n)
+            //)
 
+            n
+
+        // fake removeChild (removing the one and only child)
+        e?removeChild <- fun (n : Types.Node) ->
+            if n = child then child <- null
+            n
+
+    member x.Current = child
+
+    member x.Element =
+        match latestOperation with
+        | Some op -> 
+            op |> Promise.map (fun () -> child)
+        | None ->
+            Promise.create (fun s _ -> s child)
+
+    member x.Render(n : ReactElement) =
+        run (fun success error ->
+            ReactDom.render(n, e, fun () ->
+                success child
             )
         )
 
     member x.Unmount() =
-        run (fun () ->
-            Promise.create (fun success _error ->   
-                let mutable res = false
-                match real with
-                | Some r ->
-                    let de = dst :> Types.Element
-                    if de <> r then
-                        remove r
-                        dst.appendChild r |> ignore
-                        res <- ReactDom.unmountComponentAtNode stub
-                    else
-                        res <- ReactDom.unmountComponentAtNode stub
-                        remove dst
-                        
-                | None ->
-                    ()
-
-                real <- None
-                success res
-            )
+        run (fun success error ->
+            let old = child
+            if isNull old then
+                success None
+            else
+                let res = ReactDom.unmountComponentAtNode e
+                if res then
+                    child <- null
+                    success (Some old)
+                else
+                    success None
         )
 
 type internal AListComponentProps =
@@ -103,7 +96,7 @@ type internal AListComponentState(tag : string, children : alist<ReactElement>) 
     let mutable parent : Types.Element = null
     let mutable reader : Option<IIndexListReader<ReactElement>> = None
     let mutable marking = noDisposable
-    let mutable cache : IndexList<ReactRenderedElement> = IndexList.empty
+    let mutable cache : IndexList<ReactPseudoParent> = IndexList.empty
 
     let getReader(callback : unit -> unit) =
         match reader with
@@ -115,51 +108,43 @@ type internal AListComponentState(tag : string, children : alist<ReactElement>) 
             r
 
     let update (deltas : IndexListDelta<ReactElement>) =
-        for (index, op) in IndexListDelta.toSeq deltas do
-            match op with
-            | Set react ->  
-                let (_l, self, right) = IndexList.neighbours index cache
-                match self with
-                | Some (_, dst) -> 
-                    dst.Render(react) |> ignore
-
-                | None ->
-                    match right with
-                    | Some (_ri, re) ->
-                        let insert (e : Types.Element) =
-                            re.Element |> Promise.map (fun re ->
-                                element.insertBefore(e, re) |> ignore
-                            )
-
-                        let remove (e : Types.Element) =
-                            e.remove()
-
-                        let element = ReactRenderedElement(insert, remove)
-                        element.Render(react) |> ignore
-                        cache <- IndexList.set index element cache
+        promise {
+            for (index, op) in IndexListDelta.toSeq deltas do
+                match op with
+                | Set react ->  
+                    let (_l, self, right) = IndexList.neighbours index cache
+                    match self with
+                    | Some (_, dst) ->  
+                        let old = dst.Current
+                        let! n = dst.Render(react)
+                        if old <> n then element.replaceChild(n, old) |> ignore
 
                     | None ->
-                        
-                        let insert (e : Types.Element) =
-                            promise {
-                                element.appendChild(e) |> ignore
-                            }
+                        match right with
+                        | Some (_ri, re) ->
+                            let parent = ReactPseudoParent()
+                            let! node = parent.Render(react)
+                            let! re = re.Element
+                            element.insertBefore(node, re) |> ignore
+                            cache <- IndexList.set index parent cache
 
-                        let remove (e : Types.Element) =
-                            e.remove()
+                        | None ->
+                            let parent = ReactPseudoParent()
+                            let! node = parent.Render(react)
+                            element.appendChild node |> ignore
+                            cache <- IndexList.set index parent cache
 
-                        let element = ReactRenderedElement(insert, remove)
-                        element.Render(react) |> ignore
-                        cache <- IndexList.set index element cache
+                | Remove ->
+                    match IndexList.tryRemove index cache with
+                    | Some (root, rest) ->
+                        cache <- rest
+                        match! root.Unmount() with
+                        | Some e -> element.removeChild e |> ignore
+                        | None -> ()
 
-            | Remove ->
-                match IndexList.tryRemove index cache with
-                | Some (root, rest) ->
-                    cache <- rest
-                    root.Unmount() |> ignore
-
-                | None ->
-                    ()
+                    | None ->
+                        ()
+        }
 
     let recreateReader(callback : unit -> unit) =
         let r = children.GetReader()
@@ -176,7 +161,7 @@ type internal AListComponentState(tag : string, children : alist<ReactElement>) 
         if isNull element || element = e then
             element <- e
             parent <- e.parentElement
-        elif isNull e then
+        elif isNull e then 
             ()
         else
             promise {
@@ -228,13 +213,13 @@ type internal AListComponent(a : AListComponentProps)  =
         base.state.value
 
     override x.componentDidMount() =
-        x.state.Update x.forceUpdate
+        x.state.Update x.forceUpdate |> ignore
 
     override x.componentWillUnmount() =
         x.state.Dispose()
 
     override x.componentDidUpdate(_, _) =
-        x.state.Replace(x.props.children, x.forceUpdate)
+        x.state.Replace(x.props.children, x.forceUpdate) |> ignore
 
     override x.shouldComponentUpdate(_,_) =
         true
@@ -249,6 +234,16 @@ type internal AListComponent(a : AListComponentProps)  =
 
 module AListComponent =
     let ofAList (tag : string) (children : alist<ReactElement>) =
-        let typ = Fable.React.ReactElementType.ofComponent<AListComponent,_,_>
-        Fable.React.ReactElementType.create typ { tag = tag; children = children } []
+        if children.IsConstant then
+            let children =
+                children.Content
+                |> AVal.force
+                |> IndexList.toList
+
+            let typ = Fable.React.ReactElementType.ofHtmlElement tag
+            Fable.React.ReactElementType.create typ () children
+            
+        else
+            let typ = Fable.React.ReactElementType.ofComponent<AListComponent,_,_>
+            Fable.React.ReactElementType.create typ { tag = tag; children = children } []
         
