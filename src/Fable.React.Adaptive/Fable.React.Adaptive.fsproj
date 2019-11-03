@@ -10,6 +10,7 @@
     <OutputPath>..\..\bin\Release\</OutputPath>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="AttributeMap.fs" />
     <Compile Include="Components\Helpers.fs" />
     <Compile Include="Components\AList.fs" />
     <Compile Include="Components\Log.fs" />

@@ -124,7 +124,7 @@ type internal AListComponentState(tag : string, children : alist<ReactElement>) 
                         | Some (_ri, re) ->
                             let parent = ReactPseudoParent()
                             let! node = parent.Render(react)
-                            let! re = re.Element
+                            let re = re.Current
                             element.insertBefore(node, re) |> ignore
                             cache <- IndexList.set index parent cache
 
