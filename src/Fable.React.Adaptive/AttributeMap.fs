@@ -4,35 +4,21 @@ open Fable.Core
 open Fable.React.Props
 open Fable.Core.JsInterop
 open FSharp.Data.Adaptive
+open Fable.React.Adaptive.JsHelpers
+
 
 
 type AttributeMap = amap<string, obj>
 
 module internal UnionType =
 
-    [<Emit("Object.keys($0)")>]
-    let keys (o : obj) : seq<string> = jsNative
-
     let inline toHashMap (rule : CaseRules) (p : seq<'T>) : HashMap<string, obj> =
         let o = keyValueList rule p
-        keys o 
+        o.Keys
         |> Seq.map (fun k -> k, o?(k))
         |> HashMap.ofSeq
 
 module AttributeMap =
-
-    [<Emit("Object.assign($0, $1)")>]
-    let private assign (dst : obj) (src : obj) : unit = jsNative
-
-    
-    [<Emit("typeof $0 === \"function\"")>]
-    let private isFunction (o : obj) : bool = jsNative
-    
-    
-    [<Emit("arguments")>]
-    let private args : obj[] = jsNative
-
-
 
     let empty : AttributeMap = AMap.empty<string, obj>
 
@@ -66,22 +52,22 @@ module AttributeMap =
         
     let union (l : AttributeMap) (r : AttributeMap) : AttributeMap =
         let resolve (key : string) (l : obj) (r : obj) =
-            match key with
-            | "className" -> string l + " " + string r |> box
-            | "style" ->
+            if key = "className" then
+                string l + " " + string r |> box
+
+            elif JsType.isFunction l && JsType.isFunction r then
+                let l = unbox<JsFunc> l
+                let r = unbox<JsFunc> r
+                box <| fun () ->
+                    l.Invoke arguments |> ignore
+                    r.Invoke arguments |> ignore
+            elif JsType.isObject l && JsType.isObject r then
                 let res = obj()
-                assign res l
-                assign res r
+                res.Assign(l)
+                res.Assign(r)
                 res
-            | _ -> 
-                if isFunction l && isFunction r then
-                    let l = unbox<JsFunc> l
-                    let r = unbox<JsFunc> r
-                    box <| fun () ->
-                        l.Invoke args |> ignore
-                        r.Invoke args |> ignore
-                else
-                    r
+            else
+                r
         AMap.unionWith resolve l r
 
     type Builder() =
@@ -90,7 +76,7 @@ module AttributeMap =
 
         member inline x.Yield (attr : IHTMLProp) = 
             single attr
-
+             
         member inline x.Yield (attr : aval<#IHTMLProp>) =
             ofAValSingle attr
 

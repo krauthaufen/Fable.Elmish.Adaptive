@@ -8,11 +8,9 @@ open Fable.React
 open Fable.React.ReactiveComponents
 open Fable.React.Props
 open FSharp.Data.Adaptive
-
+open Fable.React.Adaptive.JsHelpers
 
 type internal ReactPseudoParent() =
-    [<Emit("Object.defineProperty($0, $1, { get: $2 })")>]
-    static let defineProperty (o : obj) (name : string) (getter : unit -> 'a) : unit = jsNative
 
     let e = document.createElement("div")
     let mutable child : Types.Node = null
@@ -31,17 +29,17 @@ type internal ReactPseudoParent() =
 
     do  
         // fake firstChild (used by react interally)
-        defineProperty e "firstChild" (fun () -> child)
+        e.DefineProperty("firstChild", fun () -> child)
 
         // fake appendChild (setting our one and only child)
         e?appendChild <- fun (n : Types.Node) ->
             child <- n
-            defineProperty n "parentNode" (fun () -> e)
+            n.DefineProperty("parentNode", fun () -> e)
 
-            //let getter = n?__proto__?__lookupGetter__("parentNode")
-            //defineProperty n "realParentNode" (fun () ->
-            //    getter?call(n)
-            //)
+            // let getter = n?__proto__?__lookupGetter__("parentNode")
+            // defineProperty n "realParentNode" (fun () ->
+            //     getter?call(n)
+            // )
 
             n
 
@@ -83,10 +81,11 @@ type internal ReactPseudoParent() =
 type internal AListComponentProps =
     {   
         tag         : string
+        attributes  : AttributeMap
         children    : alist<ReactElement>
     }
 
-type internal AListComponentState(tag : string, children : alist<ReactElement>) =
+type internal AListComponentState(tag : string, attributes : AttributeMap, children : alist<ReactElement>) =
     static let noDisposable =
         { new IDisposable with member x.Dispose() = () }
 
@@ -98,6 +97,10 @@ type internal AListComponentState(tag : string, children : alist<ReactElement>) 
     let mutable marking = noDisposable
     let mutable cache : IndexList<ReactPseudoParent> = IndexList.empty
 
+    let mutable attributes = attributes
+    let mutable attMarking = noDisposable
+    let mutable att : Option<AttributeUpdater> = None
+
     let getReader(callback : unit -> unit) =
         match reader with
         | Some r -> r
@@ -107,6 +110,25 @@ type internal AListComponentState(tag : string, children : alist<ReactElement>) 
             reader <- Some r
             r
 
+    let getAttributeUpdater(callback : unit -> unit) =
+        match att with
+        | Some att -> att
+        | None ->
+            let u = AttributeUpdater(element, attributes)
+            attMarking <- u.AddMarkingCallback callback
+            att <- Some u
+            u
+
+
+
+    let recreateReader(callback : unit -> unit) =
+        let r = children.GetReader()
+        let s = r.AddMarkingCallback callback
+        marking.Dispose()
+        marking <- s
+        reader <- Some r
+        r
+        
     let update (deltas : IndexListDelta<ReactElement>) =
         promise {
             for (index, op) in IndexListDelta.toSeq deltas do
@@ -146,14 +168,6 @@ type internal AListComponentState(tag : string, children : alist<ReactElement>) 
                         ()
         }
 
-    let recreateReader(callback : unit -> unit) =
-        let r = children.GetReader()
-        let s = r.AddMarkingCallback callback
-        marking.Dispose()
-        marking <- s
-        reader <- Some r
-        r
-
     member x.Children = children
     member x.Tag = tag
 
@@ -161,6 +175,10 @@ type internal AListComponentState(tag : string, children : alist<ReactElement>) 
         if isNull element || element = e then
             element <- e
             parent <- e.parentElement
+            match att with
+            | Some att -> att.SetNode e
+            | None -> ()
+            
         elif isNull e then 
             ()
         else
@@ -174,7 +192,9 @@ type internal AListComponentState(tag : string, children : alist<ReactElement>) 
             tag <- e.tagName.ToLower()
             element <- e
             parent <- e.parentElement
-
+            match att with
+            | Some att -> att.SetNode e
+            | None -> ()
 
     member x.Replace(newList : alist<ReactElement>, callback : unit -> unit) =
         if children = newList then
@@ -192,22 +212,39 @@ type internal AListComponentState(tag : string, children : alist<ReactElement>) 
                 let r = getReader callback
                 update (r.GetChanges AdaptiveToken.Top)
       
+    member x.ReplaceAttributes(newAttributes : AttributeMap, callback : unit -> unit) =
+        let up = getAttributeUpdater callback
+        if attributes <> newAttributes then
+            attributes <- newAttributes
+            up.SetAttributes newAttributes
+        up.Update AdaptiveToken.Top
+
+            
+
+
     member x.Update(callback : unit -> unit) =
         let r = getReader callback
-        update (r.GetChanges AdaptiveToken.Top)
+        let u = getAttributeUpdater callback
+        let res = update (r.GetChanges AdaptiveToken.Top)
+        u.Update AdaptiveToken.Top
+        res
 
     member x.Dispose() =
         marking.Dispose()
+        attMarking.Dispose()
         children <- AList.empty
         element <- null
         reader <- None
         marking <- noDisposable
         cache <- IndexList.empty
+        attributes <- AMap.empty
+        attMarking <- noDisposable
+        att <- None
 
 type internal AListComponent(a : AListComponentProps)  =
     inherit Fable.React.Component<AListComponentProps, State<AListComponentState>>(a) 
     static do ComponentHelpers.setDisplayName<AListComponent,_,_> "AList"
-    do base.setInitState({ value = AListComponentState(a.tag, a.children) })
+    do base.setInitState({ value = AListComponentState(a.tag, a.attributes, a.children) })
        
     member x.state = 
         base.state.value
@@ -220,6 +257,7 @@ type internal AListComponent(a : AListComponentProps)  =
 
     override x.componentDidUpdate(_, _) =
         x.state.Replace(x.props.children, x.forceUpdate) |> ignore
+        x.state.ReplaceAttributes(x.props.attributes, x.forceUpdate)
 
     override x.shouldComponentUpdate(_,_) =
         true
@@ -233,17 +271,23 @@ type internal AListComponent(a : AListComponentProps)  =
           
 
 module AListComponent =
-    let ofAList (tag : string) (children : alist<ReactElement>) =
-        if children.IsConstant then
+    let ofAList (tag : string) (attributes : AttributeMap) (children : alist<ReactElement>) =
+        if children.IsConstant && attributes.IsConstant then
             let children =
                 children.Content
                 |> AVal.force
                 |> IndexList.toList
 
+            let props =
+                attributes.Content
+                |> AVal.force
+                |> HashMap.toList
+                |> List.map (fun (k, v) -> HTMLAttr.Custom(k, v))
+
             let typ = Fable.React.ReactElementType.ofHtmlElement tag
-            Fable.React.ReactElementType.create typ () children
+            Fable.React.ReactElementType.create typ props children
             
         else
             let typ = Fable.React.ReactElementType.ofComponent<AListComponent,_,_>
-            Fable.React.ReactElementType.create typ { tag = tag; children = children } []
+            Fable.React.ReactElementType.create typ { tag = tag; attributes = attributes; children = children } []
         
