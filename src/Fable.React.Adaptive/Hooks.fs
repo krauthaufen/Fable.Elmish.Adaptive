@@ -30,3 +30,8 @@ module AdaptiveExtensions =
 
             stateHook.current 
 
+
+        member x.useAdaptive (value: aset<'T>) =
+            x.useAdaptive value.Content
+
+

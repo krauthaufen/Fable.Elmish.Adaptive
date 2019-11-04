@@ -85,7 +85,7 @@ let run() =
                 | Some s -> Some (OnMouseEnter (fun _ -> console.warn "asdadsdasd")) 
                 | None -> None
             )
-
+            Style [ FontFamily "monospace" ]
             Class "asdsad"
 
         }
@@ -116,7 +116,7 @@ let run() =
                 list |> AList.map (fun text ->
                     // withLogging just adds some logging to the given Element hooking
                     // `componentDidMount`, `componentWillMount`, etc. for validation purposes.
-                    li [Style [FontFamily "monospace"]] [
+                    li [] [
                         div [Style [Color "darkred"]] [str text]
                         |> withLogging text
                     ]
@@ -134,6 +134,10 @@ let run() =
                 )
 
             element ()
+
+            adiv AttributeMap.empty (
+                list |> AList.map str
+            )
 
             //// here's a simpler variant not using the changeable tag
             //aul AttributeMap.empty (

@@ -4,9 +4,9 @@ open Fable.React
         
 [<AutoOpen>]
 module AdaptiveTags =
-    let inline adiv c = AListComponent.ofAList "div" c
-    let inline aol c = AListComponent.ofAList "ol" c
-    let inline aul c = AListComponent.ofAList "ul" c
+    let inline adiv att children = AListComponent.ofAList "div" att children
+    let inline aol att children = AListComponent.ofAList "ol" att children
+    let inline aul att children = AListComponent.ofAList "ul" att children
 
     let inline withLogging (name : string) (e : ReactElement) = 
         LogComponent.create name e
