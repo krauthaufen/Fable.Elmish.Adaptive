@@ -29,9 +29,17 @@ module AdaptiveExtensions =
             Hooks.useEffectDisposable (fun () -> marking)
 
             stateHook.current 
-
-
-        member x.useAdaptive (value: aset<'T>) =
+            
+        /// uses the given aset as react-state-hook
+        member inline x.useAdaptive (value: aset<'T>) =
+            x.useAdaptive value.Content
+            
+        /// uses the given amap as react-state-hook
+        member inline x.useAdaptive (value: amap<'K, 'V>) =
+            x.useAdaptive value.Content
+            
+        /// uses the given alist as react-state-hook
+        member inline x.useAdaptive (value: alist<'T>) =
             x.useAdaptive value.Content
 
 

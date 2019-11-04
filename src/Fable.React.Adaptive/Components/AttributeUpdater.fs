@@ -14,13 +14,24 @@ open Browser.Types
 open FSharp.Data.Adaptive
 open Fable.React.Adaptive.JsHelpers
 
+type internal MyInterface =
+    abstract member handleEvent : Event -> unit
+
+module internal EventListener =
+
+    type MyEventListener(cb : Event -> unit) =
+        interface MyInterface with
+            member x.handleEvent e = cb e
+
+    let wrap cb = MyEventListener(cb) :> MyInterface
+
 type AttributeUpdater(node : Element, attributes : AttributeMap) =
     inherit AdaptiveObject()
 
     let mutable attributes = attributes
     let mutable node = node
     let mutable reader = attributes.GetReader()
-    let mutable listeners = UncheckedDictionary.create<string, Event -> unit>()
+    let mutable listeners = UncheckedDictionary.create<string, MyInterface>()
 
     static let evtName (name : string) =
         if name.StartsWith "on" then name.Substring(2).ToLower()
@@ -43,6 +54,8 @@ type AttributeUpdater(node : Element, attributes : AttributeMap) =
             | Remove -> style?(k) <- null
 
 
+    
+
     let perform (old : HashMap<string, obj>) (ops : HashMapDelta<string, obj>) =    
         for (name, op) in ops do
             match op with
@@ -51,7 +64,7 @@ type AttributeUpdater(node : Element, attributes : AttributeMap) =
                 | (true, l) ->
                     listeners.Remove name |> ignore
                     let evtName = evtName name
-                    node.removeEventListener(evtName, l)
+                    node?removeEventListener(evtName, unbox l)
                 | _ ->  
                     if name = "style" then
                         updateStyle node?style (HashMap.tryFind name old) None
@@ -59,16 +72,25 @@ type AttributeUpdater(node : Element, attributes : AttributeMap) =
                         node.Delete name
                         //node.removeAttribute(name)
 
-            | Set value ->
-                if JsType.isFunction value then
+            | Set vv ->
+                if JsType.isFunction vv then
+                    let handler = EventListener.wrap (unbox vv)
                     let evtName = evtName name
-                    node.addEventListener(evtName, unbox value)
-                    listeners.[name] <- unbox value
+                    match listeners.TryGetValue name with
+                    | (true, old) when old = handler ->
+                        ()
+                    | (true, old) -> 
+                        node?removeEventListener(evtName, unbox old)
+                        node?addEventListener(evtName, unbox handler)
+                        listeners.[name] <- handler
+                    | _ -> 
+                        node?addEventListener(evtName, unbox handler)
+                        listeners.[name] <- handler
                 else
                     if name = "style" then
-                        updateStyle node?style (HashMap.tryFind name old) (Some value)
+                        updateStyle node?style (HashMap.tryFind name old) (Some vv)
                     else
-                        node?(name) <- value
+                        node?(name) <- vv
                         //node.setAttribute(name, unbox value)
 
 
