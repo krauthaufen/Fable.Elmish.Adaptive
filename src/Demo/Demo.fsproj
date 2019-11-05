@@ -12,7 +12,6 @@
     <OutputPath>..\..\bin\Release\</OutputPath>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="Benchmark.fs" />
     <Compile Include="AdaptiveListDemo.fs" />
     <Compile Include="SimpleApp.fs" />
     <Compile Include="Program.fs" />

@@ -2,9 +2,11 @@
 
 open FSharp.Data.Adaptive
 open Fable.Elmish.Adaptive
-open Fable.Elmish.Adaptive.Generic
+open Fable.React
+open Fable.React.Props
+open Fable.React.Adaptive
 open Browser
-
+open Fable.JsHelpers
 
 type Message =
     | Increment 
@@ -19,20 +21,20 @@ let update (model : int) (message : Message) =
     | Decrement -> model - 1
 
 let view (model : aval<int>) (emit : Message -> unit) =
-    let headerAtttributes =
-        att {
+    let headerAttributes =
+        attr {
             model |> AVal.map (fun v ->
-                if v < 0 then style "color: red" |> Some
-                elif v > 0 then style "color: darkgreen" |> Some
+                if v < 0 then Style [Color "red"] |> Some
+                elif v > 0 then Style [Color "darkgreen"] |> Some
                 else None
             )
         }
     div [] [
-        h3 headerAtttributes "Simple Counter"
-        str (AVal.map string model)
+        ah3 headerAttributes (AList.single (str "Simple Counter"))
+        astr (AVal.map (fun v -> Log.line "value: %d" v; string v) model)
         br []
-        button [click (fun () -> emit Increment)] "+"
-        button [click (fun () -> emit Decrement)] "-"
+        button [OnClick (fun _ -> emit Increment)] [ str "+" ]
+        button [OnClick (fun _ -> emit Decrement)] [ str "-" ]
     ]
 
 let app =
@@ -44,4 +46,6 @@ let app =
     }
 
 let run () =
-    App.run document.body None app |> ignore
+    let div = document.createElement "div"
+    document.body.appendChild div |> ignore
+    App.run div (Some 1) app |> ignore

@@ -4,7 +4,7 @@ open Fable.Core
 open Fable.React.Props
 open Fable.Core.JsInterop
 open FSharp.Data.Adaptive
-open Fable.React.Adaptive.JsHelpers
+open Fable.JsHelpers
 open Browser
 
 

@@ -7,7 +7,7 @@ open Fable.Core
 open Browser
 open Browser.Types
 open FSharp.Data.Adaptive
-open Fable.React.Adaptive.JsHelpers
+open Fable.JsHelpers
 
 type internal MyInterface =
     abstract member handleEvent : Event -> unit
@@ -90,11 +90,13 @@ type AttributeUpdater(node : Element, attributes : AttributeMap) =
 
 
     member x.Update(t : AdaptiveToken) =
+        //Timeout.set 0 (fun () ->
         x.EvaluateIfNeeded t () (fun t ->
             let old = reader.State
             let ops = reader.GetChanges t
             perform old ops
         )
+        //) |> ignore
 
     member x.SetNode(newNode : Element) =
         if node <> newNode then

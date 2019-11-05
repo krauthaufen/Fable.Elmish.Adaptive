@@ -1,10 +1,10 @@
-﻿namespace Fable.React.Adaptive.JsHelpers
+﻿namespace Fable.React.Adaptive
 
 open Browser
 open Fable.Core
 open Fable.Core.JsInterop
 open Fable.React
-open Fable.React.Adaptive
+open Fable.JsHelpers
 
 type internal ReactPseudoParent() =
 

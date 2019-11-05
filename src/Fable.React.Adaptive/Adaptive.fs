@@ -8,7 +8,7 @@ open Fable.React
 open Fable.React.ReactiveComponents
 open Fable.React.Props
 open FSharp.Data.Adaptive
-open Fable.React.Adaptive.JsHelpers
+open Fable.JsHelpers
 
 type internal AdaptiveComponentProps =
     {   
@@ -98,7 +98,7 @@ type internal AdaptiveComponentState(tag : string, attributes : AttributeMap, ch
 
                     | None ->
                         ()
-        }
+        } |> ignore
 
     member x.Children = children
     member x.Tag = tag
@@ -178,18 +178,21 @@ type internal AdaptiveComponent(a : AdaptiveComponentProps)  =
     static do ComponentHelpers.setDisplayName<AdaptiveComponent,_,_> "AList"
     do base.setInitState({ value = AdaptiveComponentState(a.tag, a.attributes, a.children) })
        
+    member x.invalidate() =
+        Timeout.set 0 x.forceUpdate |> ignore
+
     member x.state = 
         base.state.value
 
     override x.componentDidMount() =
-        x.state.Update x.forceUpdate |> ignore
+        x.state.Update x.invalidate |> ignore
 
     override x.componentWillUnmount() =
         x.state.Dispose()
 
     override x.componentDidUpdate(_, _) =
-        x.state.Replace(x.props.children, x.forceUpdate) |> ignore
-        x.state.ReplaceAttributes(x.props.attributes, x.forceUpdate)
+        x.state.Replace(x.props.children, x.invalidate) |> ignore
+        x.state.ReplaceAttributes(x.props.attributes, x.invalidate)
 
     override x.shouldComponentUpdate(_,_) =
         true

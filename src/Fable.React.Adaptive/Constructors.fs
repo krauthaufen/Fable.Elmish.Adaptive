@@ -2,7 +2,7 @@
 
 open Fable.React
 open FSharp.Data.Adaptive
-  
+open Fable.JsHelpers
 
 [<AutoOpen>]
 module Tags =   
@@ -11,11 +11,22 @@ module Tags =
     let private textComponent : FunctionComponent<State<aval<string>>> =
         let inline render { value = (text : aval<string>) } =
             let text = Hooks.useAdaptive text
+            Log.line "text: %s" text
             str text
             
-        FunctionComponent.Of(render, "astr")
+        FunctionComponent.Of(render, "astr", Unchecked.equals)
 
-    let astr text = textComponent { value = text }
+    let astr (text : aval<string>) = 
+        
+        AList.ofAVal (AVal.map (IndexList.single << str) text)
+        |> AdaptiveComponent.create "span" AttributeMap.empty
+
+        //let inline render () =
+        //    let text = Hooks.useAdaptive text
+        //    Log.line "text: %s" text
+        //    str text
+        //FunctionComponent.Of(render, "astr") ()
+        //textComponent { value = text }
     let inline a props children = AdaptiveComponent.create "a" props children
     let inline aabbr props children = AdaptiveComponent.create "abbr" props children
     let inline aaddress props children = AdaptiveComponent.create "address" props children

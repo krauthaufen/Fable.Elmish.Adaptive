@@ -3,7 +3,7 @@
 open Browser
 open Fable.React
 open Fable.React.ReactiveComponents
-open Fable.React.Adaptive.JsHelpers
+open Fable.JsHelpers
 
 type internal LogComponent(value : State<string * ReactElement>) =
     inherit Component<State<string * ReactElement>, State<string * ReactElement>>(value)

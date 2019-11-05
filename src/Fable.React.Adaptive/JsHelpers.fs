@@ -1,22 +1,24 @@
-﻿namespace Fable.React.Adaptive.JsHelpers
+﻿namespace Fable.JsHelpers
 
 open Fable.Core
 open Fable.Core.JsInterop
+open Browser
 
-
-module internal Performance = 
+module Performance = 
     [<Emit("performance.now()")>]
     let now() : float = jsNative
 
-type internal Timeout = interface end
-module internal Timeout = 
+[<AllowNullLiteral>]
+type Timeout = class end
+
+module Timeout = 
     [<Emit("setTimeout($1, $0)")>]
-    let setTimeout (delay : int) (action : unit -> unit) : Timeout = jsNative
+    let set (delay : int) (action : unit -> unit) : Timeout = jsNative
 
     [<Emit("clearTimeout($0)")>]
-    let clearTimeout (t : Timeout) : unit = jsNative
+    let clear (t : Timeout) : unit = jsNative
 
-module internal JsType = 
+module JsType = 
     [<Emit("typeof $0 === \"function\"")>]
     let isFunction (o : obj) : bool = jsNative
     
@@ -30,7 +32,7 @@ module internal JsType =
     let isNumber (o : obj) : bool = jsNative
    
 [<AutoOpen>]
-module internal JsHelperExtensions = 
+module JsHelperExtensions = 
 
     [<Emit("Object.defineProperty($0, $1, $2)")>]
     let private defineProperty (o : obj) (name : string) (prop : obj) : unit = jsNative
@@ -62,3 +64,20 @@ module internal JsHelperExtensions =
         static member inline Arguments : obj[] = arguments
 
 
+
+
+module Log =
+    let inline line fmt =
+        Printf.kprintf (fun str -> console.log(str)) fmt
+
+    let inline warn fmt =
+        Printf.kprintf (fun str -> console.warn(str)) fmt
+
+    let inline error fmt =
+        Printf.kprintf (fun str -> console.error(str)) fmt
+
+    let inline start fmt =
+        Printf.kprintf (fun str -> console.group str) fmt
+        
+    let inline stop() =
+        console.groupEnd()

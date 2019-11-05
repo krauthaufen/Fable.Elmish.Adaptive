@@ -10,7 +10,7 @@
     <OutputPath>..\..\bin\Release\</OutputPath>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="JsInterop.fs" />
+    <Compile Include="JsHelpers.fs" />
     <Compile Include="ReactHelpers.fs" />
     <Compile Include="Hooks.fs" />
     <Compile Include="Log.fs" />
