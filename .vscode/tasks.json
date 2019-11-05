@@ -12,7 +12,10 @@
             },
             "label": "Build",
             "args": [],
-            "group": "build"
+            "group": "build",
+            "problemMatcher": [
+                "$msCompile"
+            ]
         },
         {
             "command": "${workspaceRoot}/build.sh",
@@ -21,11 +24,14 @@
             },
             "label": "Watch",
             "args": [
-                "-t", "Watch"
+                "-t",
+                "Watch"
             ],
             "group": "build",
             "isBackground": true,
-            "problemMatcher": ["$fable-webpack"]
+            "problemMatcher": [
+                "$fable-webpack"
+            ]
         }
     ]
 }
