@@ -11,6 +11,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="JsHelpers.fs" />
+    <Compile Include="AdaptiveHelpers.fs" />
     <Compile Include="ReactHelpers.fs" />
     <Compile Include="Hooks.fs" />
     <Compile Include="Log.fs" />

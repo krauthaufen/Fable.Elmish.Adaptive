@@ -17,16 +17,8 @@ module Tags =
         FunctionComponent.Of(render, "astr", Unchecked.equals)
 
     let astr (text : aval<string>) = 
-        
-        AList.ofAVal (AVal.map (IndexList.single << str) text)
-        |> AdaptiveComponent.create "span" AttributeMap.empty
+        AdaptiveComponent.string text 
 
-        //let inline render () =
-        //    let text = Hooks.useAdaptive text
-        //    Log.line "text: %s" text
-        //    str text
-        //FunctionComponent.Of(render, "astr") ()
-        //textComponent { value = text }
     let inline a props children = AdaptiveComponent.create "a" props children
     let inline aabbr props children = AdaptiveComponent.create "abbr" props children
     let inline aaddress props children = AdaptiveComponent.create "address" props children
@@ -142,7 +134,25 @@ module Tags =
     let inline asource props =AdaptiveComponent.create "source" props AList.empty
     let inline atrack props = AdaptiveComponent.create "track" props AList.empty
     let inline awbr props = AdaptiveComponent.create "wbr" props AList.empty
-
+    let inline asvg props children = AdaptiveComponent.create "svg" props children
+    let inline acircle props children = AdaptiveComponent.create "circle" props children
+    let inline aclipPath props children = AdaptiveComponent.create "clipPath" props children
+    let inline adefs props children = AdaptiveComponent.create "defs" props children
+    let inline aellipse props children = AdaptiveComponent.create "ellipse" props children
+    let inline ag props children = AdaptiveComponent.create "g" props children
+    let inline aimage props children = AdaptiveComponent.create "image" props children
+    let inline aline props children = AdaptiveComponent.create "line" props children
+    let inline alinearGradient props children = AdaptiveComponent.create "linearGradient" props children
+    let inline amask props children = AdaptiveComponent.create "mask" props children
+    let inline apath props children = AdaptiveComponent.create "path" props children
+    let inline apattern props children = AdaptiveComponent.create "pattern" props children
+    let inline apolygon props children = AdaptiveComponent.create "polygon" props children
+    let inline apolyline props children = AdaptiveComponent.create "polyline" props children
+    let inline aradialGradient props children = AdaptiveComponent.create "radialGradient" props children
+    let inline arect props children = AdaptiveComponent.create "rect" props children
+    let inline astop props children = AdaptiveComponent.create "stop" props children
+    let inline atext props children = AdaptiveComponent.create "text" props children
+    let inline atspan props children = AdaptiveComponent.create "tspan" props children
 [<AutoOpen>]
 module Debugging =
     let inline withLogging (name : string) (e : ReactElement) = 

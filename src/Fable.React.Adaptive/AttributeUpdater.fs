@@ -48,9 +48,6 @@ type AttributeUpdater(node : Element, attributes : AttributeMap) =
             | Set sv -> style?(k) <- sv
             | Remove -> style?(k) <- null
 
-
-    
-
     let perform (old : HashMap<string, obj>) (ops : HashMapDelta<string, obj>) =    
         for (name, op) in ops do
             match op with
@@ -65,7 +62,6 @@ type AttributeUpdater(node : Element, attributes : AttributeMap) =
                         updateStyle node?style (HashMap.tryFind name old) None
                     else
                         node.Delete name
-                        //node.removeAttribute(name)
 
             | Set vv ->
                 if JsType.isFunction vv then
@@ -81,12 +77,10 @@ type AttributeUpdater(node : Element, attributes : AttributeMap) =
                     | _ -> 
                         node?addEventListener(evtName, unbox handler)
                         listeners.[name] <- handler
+                elif name = "style" then
+                    updateStyle node?style (HashMap.tryFind name old) (Some vv)
                 else
-                    if name = "style" then
-                        updateStyle node?style (HashMap.tryFind name old) (Some vv)
-                    else
-                        node?(name) <- vv
-                        //node.setAttribute(name, unbox value)
+                    node?(name) <- vv
 
 
     member x.Update(t : AdaptiveToken) =

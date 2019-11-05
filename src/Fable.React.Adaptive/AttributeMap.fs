@@ -55,31 +55,31 @@ module AttributeMap =
 
     let empty : AttributeMap = AMap.empty<string, obj>
 
-    let single (attr : IHTMLProp) : AttributeMap =
+    let single (attr : IProp) : AttributeMap =
         toHashMap [| attr |] |> AMap.ofHashMap
         
-    let ofAValSingle (attr : aval<#IHTMLProp>) : AttributeMap =
+    let ofAValSingle (attr : aval<#IProp>) : AttributeMap =
         attr
         |> AVal.map (fun a -> toHashMap [| a |])
         |> AMap.ofAVal
         
-    let ofAValOption (attr : aval<option<#IHTMLProp>>) : AttributeMap =
+    let ofAValOption (attr : aval<option<#IProp>>) : AttributeMap =
         attr
         |> AVal.map (function Some a -> toHashMap [| a |] | _ -> HashMap.empty)
         |> AMap.ofAVal
 
-    let ofAVal (attr : aval<#seq<#IHTMLProp>>) : AttributeMap =
+    let ofAVal (attr : aval<#seq<#IProp>>) : AttributeMap =
         attr
         |> AVal.map (fun a -> toHashMap (a :> seq<_>))
         |> AMap.ofAVal
  
-    let ofSeq (l : seq<#IHTMLProp>) : AttributeMap = 
+    let ofSeq (l : seq<#IProp>) : AttributeMap = 
         toHashMap l |> AMap.ofHashMap
 
-    let ofList (l : list<#IHTMLProp>) : AttributeMap = 
+    let ofList (l : list<#IProp>) : AttributeMap = 
         toHashMap l |> AMap.ofHashMap
 
-    let ofArray (l : array<#IHTMLProp>) : AttributeMap = 
+    let ofArray (l : array<#IProp>) : AttributeMap = 
         toHashMap l |> AMap.ofHashMap
         
     let union (l : AttributeMap) (r : AttributeMap) : AttributeMap =
@@ -89,22 +89,22 @@ module AttributeMap =
         member inline x.Zero() = 
             empty
 
-        member inline x.Yield (attr : IHTMLProp) = 
+        member inline x.Yield (attr : IProp) = 
             single attr
              
-        member inline x.Yield (attr : aval<#IHTMLProp>) =
+        member inline x.Yield (attr : aval<#IProp>) =
             ofAValSingle attr
 
-        member inline x.Yield (attr : aval<option<#IHTMLProp>>) =
+        member inline x.Yield (attr : aval<option<#IProp>>) =
             ofAValOption attr
 
-        member inline x.Yield (attr : aval<seq<#IHTMLProp>>) =
+        member inline x.Yield (attr : aval<seq<#IProp>>) =
             ofAVal attr
             
-        member inline x.Yield (attr : aval<list<#IHTMLProp>>) =
+        member inline x.Yield (attr : aval<list<#IProp>>) =
             ofAVal attr
             
-        member inline x.Yield (attr : aval<array<#IHTMLProp>>) =
+        member inline x.Yield (attr : aval<array<#IProp>>) =
             ofAVal attr
 
 

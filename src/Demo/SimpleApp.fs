@@ -14,7 +14,7 @@ type Message =
 
 let init() =
     0
-        
+      
 let update (model : int) (message : Message) =
     match message with
     | Increment -> model + 1
@@ -28,10 +28,17 @@ let view (model : aval<int>) (emit : Message -> unit) =
                 elif v > 0 then Style [Color "darkgreen"] |> Some
                 else None
             )
+            model |> AVal.map (fun v ->
+                if v < 0 then 
+                    OnMouseEnter (fun _ -> emit Increment) |> Some
+                else
+                    None
+            )
+
         }
     div [] [
         ah3 headerAttributes (AList.single (str "Simple Counter"))
-        astr (AVal.map (fun v -> Log.line "value: %d" v; string v) model)
+        astr (AVal.map string model)
         br []
         button [OnClick (fun _ -> emit Increment)] [ str "+" ]
         button [OnClick (fun _ -> emit Decrement)] [ str "-" ]
@@ -48,4 +55,4 @@ let app =
 let run () =
     let div = document.createElement "div"
     document.body.appendChild div |> ignore
-    App.run div (Some 1) app |> ignore
+    App.run div None app |> ignore

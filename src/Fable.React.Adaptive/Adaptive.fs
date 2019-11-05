@@ -206,8 +206,61 @@ type internal AdaptiveComponent(a : AdaptiveComponentProps)  =
   
 
 
+type internal AdaptiveStringProps =
+    {
+        text : aval<string>
+    }
+    
+type internal AdaptiveStringState(text : aval<string>, cb : unit -> unit) =
+    let mutable sub = text.AddMarkingCallback(cb)
+    let mutable text = text
+
+    member x.Current : string =
+        AVal.force text
+
+    member x.SetText(t : aval<string>, callback : unit -> unit) =
+        if text <> t then
+            sub.Dispose()
+            sub <- t.AddMarkingCallback(callback)
+            text <- t
+        
+    member x.Dispose() =
+        sub.Dispose()
+        text <- AVal.constant ""
+
+type internal AdaptiveStringComponent(a : AdaptiveStringProps) as this  =
+    inherit Fable.React.Component<AdaptiveStringProps, State<AdaptiveStringState>>(a) 
+    static do ComponentHelpers.setDisplayName<AdaptiveComponent,_,_> "AList"
+    do base.setInitState({ value = AdaptiveStringState(a.text, this.forceUpdate) })
+       
+    member x.invalidate() =
+        Timeout.set 0 x.forceUpdate |> ignore
+
+    member x.state = 
+        base.state.value
+
+    override x.componentWillUnmount() =
+        x.state.Dispose()
+
+    override x.componentDidUpdate(_, _) = 
+        x.state.SetText(x.props.text, x.forceUpdate)
+
+    override x.shouldComponentUpdate(_,_) =
+        true
+
+    override x.render() =
+        str x.state.Current 
 
 module AdaptiveComponent =
+
+    let string (text : aval<string>) =
+        if text.IsConstant then
+            str (AVal.force text)
+        else
+            let typ = Fable.React.ReactElementType.ofComponent<AdaptiveStringComponent,_,_>
+            Fable.React.ReactElementType.create typ { text = text } []
+        
+
     let create (tag : string) (attributes : AttributeMap) (children : alist<ReactElement>) =
         if children.IsConstant && attributes.IsConstant then
             let children =
@@ -222,7 +275,7 @@ module AdaptiveComponent =
                 |> List.map (fun (k, v) -> HTMLAttr.Custom(k, v))
 
             let typ = Fable.React.ReactElementType.ofHtmlElement tag
-            Fable.React.ReactElementType.create typ props children
+            Fable.React.ReactElementType.create typ (keyValueList CaseRules.LowerFirst props) children
             
         else
             let typ = Fable.React.ReactElementType.ofComponent<AdaptiveComponent,_,_>
