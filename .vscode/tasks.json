@@ -1,0 +1,31 @@
+{
+    "version": "2.0.0",
+    "presentation": {
+        "reveal": "always"
+    },
+    "type": "shell",
+    "tasks": [
+        {
+            "command": "${workspaceRoot}/build.sh",
+            "windows": {
+                "command": "${workspaceRoot}/build.cmd"
+            },
+            "label": "Build",
+            "args": [],
+            "group": "build"
+        },
+        {
+            "command": "${workspaceRoot}/build.sh",
+            "windows": {
+                "command": "${workspaceRoot}/build.cmd"
+            },
+            "label": "Watch",
+            "args": [
+                "-t", "Watch"
+            ],
+            "group": "build",
+            "isBackground": true,
+            "problemMatcher": ["$fable-webpack"]
+        }
+    ]
+}

@@ -2,7 +2,9 @@
 
 open Fable.Core
 
+/// Functional operators for interop between `Promise<'T>` and `aval<'T>`.
 module AVal =
+    /// Implementation of a generic `Promise<'T>` adapter.
     type private PromiseValue<'T1, 'T2>(p : JS.Promise<'T1>, map : 'T1 -> 'T2, def : 'T2) as this =
         inherit AdaptiveObject()
         let mutable value = def
@@ -51,9 +53,11 @@ module AVal =
         interface AdaptiveValue<'T2> with
             member x.GetValue t = x.GetValue t
 
+    /// Creates an `aval<'T option>` that will initially hold `None` and when the promise is resolved changes to `Some`.
     let ofPromise (p : JS.Promise<'T>) = 
         PromiseValue(p, Some, None) :> aval<_>
 
-    let ofPromiseDefault (def : 'T) (p : JS.Promise<'T>) = 
-        PromiseValue(p, id, def) :> aval<_>
+    /// Creates an `aval<'T>` that will initially hold `fallback` and when the promise is resolved changes its value.
+    let ofPromiseDefault (fallback : 'T) (p : JS.Promise<'T>) = 
+        PromiseValue(p, id, fallback) :> aval<_>
         
