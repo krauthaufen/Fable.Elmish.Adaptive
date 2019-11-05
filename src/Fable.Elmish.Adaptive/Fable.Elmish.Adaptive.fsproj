@@ -16,5 +16,8 @@
     <Compile Include="Updater.fs" />
     <Compile Include="App.fs" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Fable.React.Adaptive\Fable.React.Adaptive.fsproj" />
+  </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />
 </Project>

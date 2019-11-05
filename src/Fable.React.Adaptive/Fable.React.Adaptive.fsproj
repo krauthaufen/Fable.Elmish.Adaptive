@@ -11,11 +11,12 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="JsInterop.fs" />
-    <Compile Include="AttributeMap.fs" />
-    <Compile Include="Components\AttributeUpdater.fs" />
-    <Compile Include="Components\AList.fs" />
-    <Compile Include="Components\Log.fs" />
+    <Compile Include="ReactHelpers.fs" />
     <Compile Include="Hooks.fs" />
+    <Compile Include="Log.fs" />
+    <Compile Include="AttributeMap.fs" />
+    <Compile Include="AttributeUpdater.fs" />
+    <Compile Include="Adaptive.fs" />
     <Compile Include="Constructors.fs" />
   </ItemGroup>
   <Import Project="..\..\.paket\Paket.Restore.targets" />

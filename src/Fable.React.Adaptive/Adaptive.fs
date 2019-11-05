@@ -10,82 +10,14 @@ open Fable.React.Props
 open FSharp.Data.Adaptive
 open Fable.React.Adaptive.JsHelpers
 
-type internal ReactPseudoParent() =
-
-    let e = document.createElement("div")
-    let mutable child : Types.Node = null
-    let mutable latestOperation : option<JS.Promise<unit>> = None
-
-    let run (render : ('a -> unit) -> (exn -> unit) -> unit) =
-        match latestOperation with
-        | Some r ->
-            let res = r |> Promise.bind (fun () -> Promise.create render)
-            latestOperation <- Some (unbox res)
-            res
-        | None ->
-            let res = Promise.create render
-            latestOperation <- Some (unbox res)
-            res
-
-    do  
-        // fake firstChild (used by react interally)
-        e.DefineProperty("firstChild", fun () -> child)
-
-        // fake appendChild (setting our one and only child)
-        e?appendChild <- fun (n : Types.Node) ->
-            child <- n
-            n.DefineProperty("parentNode", fun () -> e)
-
-            // let getter = n?__proto__?__lookupGetter__("parentNode")
-            // defineProperty n "realParentNode" (fun () ->
-            //     getter?call(n)
-            // )
-
-            n
-
-        // fake removeChild (removing the one and only child)
-        e?removeChild <- fun (n : Types.Node) ->
-            if n = child then child <- null
-            n
-
-    member x.Current = child
-
-    member x.Element =
-        match latestOperation with
-        | Some op -> 
-            op |> Promise.map (fun () -> child)
-        | None ->
-            Promise.create (fun s _ -> s child)
-
-    member x.Render(n : ReactElement) =
-        run (fun success error ->
-            ReactDom.render(n, e, fun () ->
-                success child
-            )
-        )
-
-    member x.Unmount() =
-        run (fun success error ->
-            let old = child
-            if isNull old then
-                success None
-            else
-                let res = ReactDom.unmountComponentAtNode e
-                if res then
-                    child <- null
-                    success (Some old)
-                else
-                    success None
-        )
-
-type internal AListComponentProps =
+type internal AdaptiveComponentProps =
     {   
         tag         : string
         attributes  : AttributeMap
         children    : alist<ReactElement>
     }
 
-type internal AListComponentState(tag : string, attributes : AttributeMap, children : alist<ReactElement>) =
+type internal AdaptiveComponentState(tag : string, attributes : AttributeMap, children : alist<ReactElement>) =
     static let noDisposable =
         { new IDisposable with member x.Dispose() = () }
 
@@ -241,10 +173,10 @@ type internal AListComponentState(tag : string, attributes : AttributeMap, child
         attMarking <- noDisposable
         att <- None
 
-type internal AListComponent(a : AListComponentProps)  =
-    inherit Fable.React.Component<AListComponentProps, State<AListComponentState>>(a) 
-    static do ComponentHelpers.setDisplayName<AListComponent,_,_> "AList"
-    do base.setInitState({ value = AListComponentState(a.tag, a.attributes, a.children) })
+type internal AdaptiveComponent(a : AdaptiveComponentProps)  =
+    inherit Fable.React.Component<AdaptiveComponentProps, State<AdaptiveComponentState>>(a) 
+    static do ComponentHelpers.setDisplayName<AdaptiveComponent,_,_> "AList"
+    do base.setInitState({ value = AdaptiveComponentState(a.tag, a.attributes, a.children) })
        
     member x.state = 
         base.state.value
@@ -268,10 +200,12 @@ type internal AListComponent(a : AListComponentProps)  =
             keyValueList CaseRules.LowerFirst [Ref x.state.SetElement], 
             []
         )
-          
+  
 
-module AListComponent =
-    let ofAList (tag : string) (attributes : AttributeMap) (children : alist<ReactElement>) =
+
+
+module AdaptiveComponent =
+    let create (tag : string) (attributes : AttributeMap) (children : alist<ReactElement>) =
         if children.IsConstant && attributes.IsConstant then
             let children =
                 children.Content
@@ -288,6 +222,6 @@ module AListComponent =
             Fable.React.ReactElementType.create typ props children
             
         else
-            let typ = Fable.React.ReactElementType.ofComponent<AListComponent,_,_>
+            let typ = Fable.React.ReactElementType.ofComponent<AdaptiveComponent,_,_>
             Fable.React.ReactElementType.create typ { tag = tag; attributes = attributes; children = children } []
         

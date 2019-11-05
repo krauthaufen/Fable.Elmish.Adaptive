@@ -25,9 +25,6 @@ let run() =
     let list = clist initial
     let size = cval None
 
-    // the changeable tag for the list.
-    let tag = cval "ul"
-
     // callback inserting a new string at a random position in the list.
     let insert _ =
         transact (fun () ->
@@ -65,14 +62,6 @@ let run() =
             size.Value <- None
         )
 
-    // callback changing the tag from ul to ol and vice versa.
-    let changeType _ =
-        transact (fun () ->
-            match tag.Value with
-            | "ul" -> tag.Value <- "ol"
-            | _ -> tag.Value <- "ul"
-        )
-
 
     let attributes =
         attr {
@@ -80,22 +69,14 @@ let run() =
                 | Some s -> Some (Style [ FontSize (sprintf "%fpx" s) ]) 
                 | None -> None
             )
-            
-            size |> AVal.map (function 
-                | Some s -> Some (OnMouseEnter (fun _ -> console.warn "asdadsdasd")) 
-                | None -> None
-            )
             Style [ FontFamily "monospace" ]
-            Class "asdsad"
-
         }
-
 
     let increaseFontSize _ =
         transact (fun () ->
             match size.Value with
             | Some s -> size.Value <- Some (1.2 * s)
-            | None -> size.Value <- Some 10.0
+            | None -> size.Value <- Some 20.0
         )
     
 
@@ -107,49 +88,26 @@ let run() =
             button [OnClick append] [ str "Append"]
             button [OnClick change] [ str "Change"]
             button [OnClick clear] [ str "Reset"]
-            button [OnClick changeType] [ str "Change Type"]
             button [OnClick increaseFontSize] [ str "Increase font size"]
-              
 
-
-            let children =
+            // here's a simpler variant not using the changeable tag
+            aol attributes (
                 list |> AList.map (fun text ->
                     // withLogging just adds some logging to the given Element hooking
                     // `componentDidMount`, `componentWillMount`, etc. for validation purposes.
-                    li [] [
+                    li [Style [FontFamily "monospace"]] [
                         div [Style [Color "darkred"]] [str text]
                         |> withLogging text
                     ]
                 )
-
-            // we use the generic AListComponent.ofAList here that allows changing the tag
-            // and internally handles alist-changes to update the dom accordingly without
-            // using reacts reconciler.
-            // NOTE that the current implementation cannot handle any HTML attributes
-            //      but we plan to support these too as the library evolves...
-            let element = 
-                FunctionComponent.Of (fun () ->
-                    let tag = Hooks.useAdaptive tag
-                    AListComponent.ofAList tag attributes children
-                )
-
-            element ()
-
-            adiv AttributeMap.empty (
-                list |> AList.map str
             )
 
-            //// here's a simpler variant not using the changeable tag
-            //aul AttributeMap.empty (
-            //    list |> AList.map (fun text ->
-            //        // withLogging just adds some logging to the given Element hooking
-            //        // `componentDidMount`, `componentWillMount`, etc. for validation purposes.
-            //        li [Style [FontFamily "monospace"]] [
-            //            div [Style [Color "darkred"]] [str text]
-            //            |> withLogging text
-            //        ]
-            //    )
-            //)
+            div [] [
+                list 
+                |> AList.toAVal 
+                |> AVal.map (fun l -> sprintf "%d elements" l.Count)
+                |> astr
+            ]
         ]
        
     let root = document.createElement "div"
