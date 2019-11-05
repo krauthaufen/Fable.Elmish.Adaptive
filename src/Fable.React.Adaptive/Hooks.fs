@@ -64,11 +64,11 @@ module AdaptiveExtensions =
         member inline x.useAdaptive (value: cset<'T>) =
             x.useAdaptive (value :> aset<'T>).Content
 
-        /// uses the given amap as react-state-hook
+        /// uses the given cmap as react-state-hook
         member inline x.useAdaptive (value: cmap<'K, 'V>) =
             x.useAdaptive (value :> amap<'K, 'V>).Content
 
-        /// uses the given alist as react-state-hook
+        /// uses the given clist as react-state-hook
         member inline x.useAdaptive (value: clist<'T>) =
             x.useAdaptive (value :> alist<'T>).Content
 
