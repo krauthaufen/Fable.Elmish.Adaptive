@@ -8,6 +8,7 @@ let main argv =
     document.addEventListener("readystatechange", fun _ ->
         if document.readyState = "complete" then
             //AdaptiveListDemo.run()
-            SimpleApp.run()
+            //SimpleApp.run()
+            TodoMvcApp.runMe()
     )
     0

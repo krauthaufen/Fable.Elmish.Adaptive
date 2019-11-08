@@ -41,6 +41,9 @@ module.exports = {
 	plugins: [
 	  new CopyPlugin([
 	    { from: path.join(__dirname, "./src/Demo/index.html"), to: path.join(__dirname, "./bin/Fable/index.html") }
-	  ])
+	  ]),
+      new CopyPlugin([
+            { from: path.join(__dirname,'./index.css') }
+        ])
     ]
 }

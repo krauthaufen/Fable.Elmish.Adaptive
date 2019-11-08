@@ -104,15 +104,14 @@ type internal AdaptiveComponentState(tag : string, attributes : AttributeMap, ch
     member x.Tag = tag
 
     member x.SetElement (e : Types.Element) =
-        if isNull element || element = e then
+        if isNull e then 
+            ()
+        elif isNull element || element = e then
             element <- e
             parent <- e.parentElement
             match att with
             | Some att -> att.SetNode e
             | None -> ()
-            
-        elif isNull e then 
-            ()
         else
             promise {
                 for r in cache do
@@ -231,7 +230,7 @@ type internal AdaptiveStringState(text : aval<string>, cb : unit -> unit) =
 type internal AdaptiveStringComponent(a : AdaptiveStringProps) as this  =
     inherit Fable.React.Component<AdaptiveStringProps, State<AdaptiveStringState>>(a) 
     static do ComponentHelpers.setDisplayName<AdaptiveComponent,_,_> "AList"
-    do base.setInitState({ value = AdaptiveStringState(a.text, this.forceUpdate) })
+    do base.setInitState({ value = AdaptiveStringState(a.text, this.invalidate) })
        
     member x.invalidate() =
         Timeout.set 0 x.forceUpdate |> ignore
@@ -243,7 +242,7 @@ type internal AdaptiveStringComponent(a : AdaptiveStringProps) as this  =
         x.state.Dispose()
 
     override x.componentDidUpdate(_, _) = 
-        x.state.SetText(x.props.text, x.forceUpdate)
+        x.state.SetText(x.props.text, x.invalidate)
 
     override x.shouldComponentUpdate(_,_) =
         true

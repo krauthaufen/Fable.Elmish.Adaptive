@@ -15,6 +15,7 @@
     <Compile Include="Model.fs" />
     <Compile Include="AdaptiveListDemo.fs" />
     <Compile Include="SimpleApp.fs" />
+    <Compile Include="TodoMvc.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
   <ItemGroup>

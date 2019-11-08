@@ -19,7 +19,7 @@ module Tags =
     let astr (text : aval<string>) = 
         AdaptiveComponent.string text 
 
-    let inline a props children = AdaptiveComponent.create "a" props children
+    let inline aa props children = AdaptiveComponent.create "a" props children
     let inline aabbr props children = AdaptiveComponent.create "abbr" props children
     let inline aaddress props children = AdaptiveComponent.create "address" props children
     let inline aarticle props children = AdaptiveComponent.create "article" props children

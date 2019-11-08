@@ -17,3 +17,24 @@ type Model =
         color : Option<string>
         things : IndexList<Named<int>>
     }
+
+namespace TodoMvc
+
+open FSharp.Data.Adaptive
+open Adaptify
+
+// MODEL
+[<ModelType>]
+type Entry =
+   { description : string
+     completed : bool
+     editing : bool }
+
+// The full application state of our todo app.
+[<ModelType>]
+type Model = 
+   { entries : IndexList<Entry>
+     field : string
+     uid : int
+     visibility : string }
+        member x.AllCompleted = x.entries |> IndexList.forall ( fun _ t -> t.completed )
