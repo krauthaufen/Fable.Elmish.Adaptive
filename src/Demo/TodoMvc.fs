@@ -82,22 +82,19 @@ let update (msg:Msg) (model:Model) : Model =
        model
 
    | Add ->
-       Browser.Dom.console.warn model.field
        let xs = if System.String.IsNullOrEmpty model.field then
                    model.entries
                 else
-                   IndexList.add (newEntry model.field model.uid) model.entries
+                   IndexList.prepend (newEntry model.field model.uid) model.entries
        { model with
            uid = model.uid + 1
            field = ""
            entries = xs }
 
    | UpdateField str ->
-     Browser.Dom.console.warn str
      { model with field = str }
 
    | EditingEntry (id,isEditing) ->
-       Browser.Dom.console.warn (sprintf "editing %A is %A" id isEditing)
        let updateEntry t =
          { t with editing = isEditing }
        { model with entries = IndexList.update id updateEntry model.entries }
@@ -155,10 +152,10 @@ open Fable.React
 open Fable.Core.JsInterop
 open Elmish.React
 
-let internal onEnter msg dispatch =
+let internal onEnter clear msg dispatch =
    function
    | (ev:Browser.Types.KeyboardEvent) when ev.keyCode = ENTER_KEY ->
-       ev.target?value <- ""
+       if clear then ev.target?value <- ""
        dispatch msg
    | _ -> ()
    |> OnKeyDown
@@ -171,7 +168,7 @@ let viewInput (model:aval<string>) dispatch =
                ClassName "new-todo"
                Placeholder "What needs to be done?"
                AVal.map valueOrDefault model
-               onEnter Add dispatch
+               onEnter true Add dispatch
                OnInput (fun ev -> !!ev.target?value |> UpdateField |> dispatch)
                AutoFocus true
            }
@@ -192,13 +189,14 @@ let viewEntry (id : Index) (todo : AdaptiveEntry) dispatch =
    (AList.ofList [ 
      div
        [ ClassName "view" ]
-       [ ainput
-           (attr { 
+       [ ainput (
+            attr { 
                  ClassName "toggle"
                  Type "checkbox"
                  AVal.map Checked todo.completed
                  OnChange (fun _ -> Check (id,(not (AVal.force todo.completed))) |> dispatch)
-           })
+           }
+         )
          label
            [ OnDoubleClick (fun _ -> EditingEntry (id,true) |> dispatch) ]
            [ astr todo.description ]
@@ -210,12 +208,11 @@ let viewEntry (id : Index) (todo : AdaptiveEntry) dispatch =
      ainput
        (attr { 
          ClassName "edit"
-         AVal.map valueOrDefault todo.description
+         AVal.map (box >> Value) todo.description
          Name "title"
-         Id ("todo-" + (string id))
          OnInput (fun ev -> UpdateEntry (id, !!ev.target?value) |> dispatch)
          OnBlur (fun _ -> EditingEntry (id,false) |> dispatch)
-         onEnter (EditingEntry (id,false)) dispatch })
+         onEnter false (EditingEntry (id,false)) dispatch })
    ])
 
 let viewEntries (visibility : aval<string>) (model : AdaptiveModel) dispatch =

@@ -61,7 +61,8 @@ type AttributeUpdater(node : Element, attributes : AttributeMap) =
                     if name = "style" then
                         updateStyle node?style (HashMap.tryFind name old) None
                     else
-                        node.Delete name
+                        node?(name) <- null
+
 
             | Set vv ->
                 if JsType.isFunction vv then
