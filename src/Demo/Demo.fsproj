@@ -12,6 +12,7 @@
     <OutputPath>..\..\bin\Release\</OutputPath>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="Model.fs" />
     <Compile Include="AdaptiveListDemo.fs" />
     <Compile Include="SimpleApp.fs" />
     <Compile Include="Program.fs" />

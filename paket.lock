@@ -3,10 +3,10 @@ STORAGE: NONE
 RESTRICTION: || (== netcoreapp2.2) (== netstandard2.0)
 NUGET
   remote: https://api.nuget.org/v3/index.json
-    Adaptify.Core (0.0.1)
-      FSharp.Data.Adaptive (>= 0.0.5-prerelease01 < 0.1.0-prerelease)
-    Adaptify.MSBuild (0.0.1)
-      Adaptify.Core (0.0.1)
+    Adaptify.Core (0.0.2)
+      FSharp.Data.Adaptive (>= 0.0.5-prerelease06 < 0.1.0-prerelease)
+    Adaptify.MSBuild (0.0.2)
+      Adaptify.Core (0.0.2)
     Elmish (3.0.6)
       FSharp.Core (>= 4.6.2)
     Fable.Browser.Blob (1.1)
