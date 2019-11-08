@@ -13,10 +13,11 @@ open FSharp.Data.Adaptive
 open Fable.React.Adaptive
 open Fable.Elmish.Adaptive
 
+// missing AList combinators
 module AList =
     let filterA (p : 'a -> aval<bool>) (l : alist<'a>) =
-        l |> AList.collect ( fun a -> 
-            p a |> AVal.map ( function true -> IndexList.single a | false -> IndexList.empty ) |> AList.ofAVal
+        l |> AList.collecti ( fun i a -> 
+            p a |> AVal.map ( function true -> IndexList.single (i, a) | false -> IndexList.empty ) |> AList.ofAVal
         )
 
     let forallA (p : 'a -> aval<bool>) (l : alist<'a>) =
@@ -249,7 +250,7 @@ let viewEntries (visibility : aval<string>) (model : AdaptiveModel) dispatch =
          (AttributeMap.ofList [ ClassName "todo-list" ])
          (entries
           |> AList.filterA isVisible
-          |> AList.mapi (fun i e -> viewEntry i e dispatch)) ]
+          |> AList.map (fun (i,e) -> viewEntry i e dispatch)) ]
 
 // VIEW CONTROLS AND FOOTER
 let visibilitySwap uri visibility (actualVisibility : aval<string>) dispatch =
