@@ -43,7 +43,7 @@ NUGET
       Fable.Core (>= 3.0)
       FSharp.Core (>= 4.7)
     FSharp.Core (4.7)
-    FSharp.Data.Adaptive (0.0.5-prerelease08)
+    FSharp.Data.Adaptive (0.0.6)
       FSharp.Core (>= 4.6.2)
     Thoth.Json (3.4.1)
       Fable.Core (>= 3.0)

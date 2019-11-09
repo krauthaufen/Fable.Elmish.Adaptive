@@ -5,16 +5,6 @@ open TodoMvc
 open FSharp.Data.Adaptive
 open Fable.Elmish.Adaptive
 
-/// some 'missing' alist combinators
-module AList =
-    let countByA (mapping: Index -> 'a -> aval<bool>) (list: alist<'a>) =
-        AList.reduceByA AdaptiveReduction.countPositive mapping list
-
-    let forallA (mapping: Index -> 'a -> aval<bool>) (list: alist<'a>) =
-        let r = AdaptiveReduction.countNegative |> AdaptiveReduction.mapOut (fun v -> v = 0)
-        AList.reduceByA r mapping list
-
-
 let [<Literal>] ESC_KEY = 27.
 let [<Literal>] ENTER_KEY = 13.
 let [<Literal>] ALL_TODOS = "all"
@@ -254,7 +244,7 @@ let viewControlsClear (entriesCompleted : aval<int>) dispatch =
 
 let viewControls (visibility : aval<string>) (entries : alist<AdaptiveEntry>) dispatch =
  let entriesCompleted =
-     entries |> AList.countByA (fun _ t -> t.completed)
+     entries |> AList.countByA (fun t -> t.completed)
 
  let entriesLeft =
     AVal.map2 (-) (AList.count entries) entriesCompleted
@@ -265,7 +255,7 @@ let viewControls (visibility : aval<string>) (entries : alist<AdaptiveEntry>) di
         AVal.map Hidden (AList.isEmpty entries) 
      })
      (AList.ofList [ 
-        let allDone = entries |> AList.forallA (fun _ e -> e.completed)
+        let allDone = entries |> AList.forallA (fun e -> e.completed)
         viewControlsCount allDone entriesLeft 
         viewControlsFilters visibility dispatch
         viewControlsClear entriesCompleted dispatch ])
