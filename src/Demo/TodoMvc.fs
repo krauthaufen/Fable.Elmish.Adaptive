@@ -13,21 +13,14 @@ open FSharp.Data.Adaptive
 open Fable.React.Adaptive
 open Fable.Elmish.Adaptive
 
-// missing AList combinators
 module AList =
-    let filterA (p : 'a -> aval<bool>) (l : alist<'a>) =
-        l |> AList.collecti ( fun i a -> 
-            p a |> AVal.map ( function true -> IndexList.single (i, a) | false -> IndexList.empty ) |> AList.ofAVal
-        )
+    let countByA (mapping: Index -> 'a -> aval<bool>) (list: alist<'a>) =
+        AList.reduceByA AdaptiveReduction.countPositive mapping list
 
-    let forallA (p : 'a -> aval<bool>) (l : alist<'a>) =
-        l |> filterA ( p >> AVal.map not ) |> AList.toAVal |> AVal.map ( fun l -> l.Count = 0 )
-        
-    let count (l : alist<'a>) =
-        l |> AList.toAVal |> AVal.map IndexList.count
-    
-    let isEmpty (l : alist<'a>) =
-        l |> AList.toAVal |> AVal.map IndexList.isEmpty
+    let forallA (mapping: Index -> 'a -> aval<bool>) (list: alist<'a>) =
+        let r = AdaptiveReduction.countNegative |> AdaptiveReduction.mapOut (fun v -> v = 0)
+        AList.reduceByA r mapping list
+
 
 let [<Literal>] ESC_KEY = 27.
 let [<Literal>] ENTER_KEY = 13.
@@ -250,7 +243,7 @@ let viewEntries (visibility : aval<string>) (model : AdaptiveModel) dispatch =
          (AttributeMap.ofList [ ClassName "todo-list" ])
          (entries
           |> AList.filterA isVisible
-          |> AList.map (fun (i,e) -> viewEntry i e dispatch)) ]
+          |> AList.mapi (fun i e -> viewEntry i e dispatch)) ]
 
 // VIEW CONTROLS AND FOOTER
 let visibilitySwap uri visibility (actualVisibility : aval<string>) dispatch =
@@ -274,14 +267,16 @@ let viewControlsFilters (visibility : aval<string>) dispatch =
      str " "
      visibilitySwap "#/completed" COMPLETED_TODOS visibility dispatch ]
 
-let viewControlsCount (entriesLeft : aval<int>)=
+let viewControlsCount (allDone : aval<bool>) (entriesLeft : aval<int>)=
  let item e =
      if e = 1 then " item" else " items"
 
  span
      [ ClassName "todo-count" ]
      [ strong [] [ astr (AVal.map string entriesLeft) ]
-       astr (entriesLeft |> AVal.map ( fun l -> item l + " left") ) ]
+       astr (entriesLeft |> AVal.map ( fun l -> item l + " left") ) 
+       astr (allDone |> AVal.map (function true -> "!!!" | _ -> ""))
+     ]
 
 let viewControlsClear (entriesCompleted : aval<int>) dispatch =
  abutton
@@ -294,9 +289,7 @@ let viewControlsClear (entriesCompleted : aval<int>) dispatch =
 
 let viewControls (visibility : aval<string>) (entries : alist<AdaptiveEntry>) dispatch =
  let entriesCompleted =
-     entries
-     |> AList.filterA (fun t -> t.completed)
-     |> AList.count
+     entries |> AList.countByA (fun _ t -> t.completed)
 
  let entriesLeft =
     AVal.map2 (-) (AList.count entries) entriesCompleted
@@ -307,7 +300,8 @@ let viewControls (visibility : aval<string>) (entries : alist<AdaptiveEntry>) di
         AVal.map Hidden (AList.isEmpty entries) 
      })
      (AList.ofList [ 
-        viewControlsCount entriesLeft 
+        let allDone = entries |> AList.forallA (fun _ e -> e.completed)
+        viewControlsCount allDone entriesLeft 
         viewControlsFilters visibility dispatch
         viewControlsClear entriesCompleted dispatch ])
 
