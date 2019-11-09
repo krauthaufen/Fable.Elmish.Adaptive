@@ -1,18 +1,11 @@
-﻿(**
-- title: Todo MVC
-- tagline: The famous todo mvc ported from elm-todomvc
-*)
+﻿module TodoMVC
 
-module TodoMvcApp
-
-open Fable.Core
 open Fable.Import
-open Elmish
 open TodoMvc
 open FSharp.Data.Adaptive
-open Fable.React.Adaptive
 open Fable.Elmish.Adaptive
 
+/// some 'missing' alist combinators
 module AList =
     let countByA (mapping: Index -> 'a -> aval<bool>) (list: alist<'a>) =
         AList.reduceByA AdaptiveReduction.countPositive mapping list
@@ -28,8 +21,6 @@ let [<Literal>] ALL_TODOS = "all"
 let [<Literal>] ACTIVE_TODOS = "active"
 let [<Literal>] COMPLETED_TODOS = "completed"
 
-
-
 let emptyModel =
    { entries = IndexList.empty
      visibility = ALL_TODOS
@@ -42,9 +33,7 @@ let newEntry desc id =
    editing = false }
 
 
-let init = function
- | Some savedModel -> savedModel
- | _ -> emptyModel
+let init() = emptyModel
 
 
 // UPDATE
@@ -69,7 +58,7 @@ type Msg =
 
 
 // How we update our Model on a given Msg?
-let update (msg:Msg) (model:Model) : Model =
+let update (model:Model) (msg:Msg)  : Model =
    match msg with
    | Failure err ->
        Fable.Core.JS.console.error(err)
@@ -116,35 +105,12 @@ let update (msg:Msg) (model:Model) : Model =
    | ChangeVisibility visibility ->
        { model with visibility = visibility }
 
-//// Local storage interface
-//module S =
-//   let private STORAGE_KEY = "elmish-react-todomvc"
-//   let private decoder = Thoth.Json.Decode.Auto.generateDecoder<Model>()
-//   let load (): Model option =
-//       Browser.WebStorage.localStorage.getItem(STORAGE_KEY)
-//       |> unbox
-//       |> Core.Option.bind (Thoth.Json.Decode.fromString decoder >> function | Ok r -> Some r | _ -> None)
-
-//   let save (model: Model) =
-//       Browser.WebStorage.localStorage.setItem(STORAGE_KEY, Thoth.Json.Encode.Auto.toString(1,model))
-
-
-//let setStorage (model:Model) : Cmd<Msg> =
-//   Cmd.OfFunc.attempt S.save model (string >> Failure)
-
-//let updateWithStorage (msg:Msg) (model:Model) =
-// match msg with
-// // If the Msg is Failure we know the model hasn't changed
-// | Failure _ -> model, []
-// | _ ->
-//   let (newModel, cmds) = update msg model
-//   newModel, Cmd.batch [ setStorage newModel; cmds ]
-
 // rendering views with React
 open Fable.React.Props
 open Fable.React
 open Fable.Core.JsInterop
 open Elmish.React
+open Fable.React.Adaptive
 
 let internal onEnter clear msg dispatch =
    function
@@ -253,7 +219,6 @@ let visibilitySwap uri visibility (actualVisibility : aval<string>) dispatch =
         attr { 
             Href uri
             AVal.map (fun a -> if a = visibility then Some (Class "selected") else None) actualVisibility
-            //classList ["selected", visibility = actualVisibility] 
         }
      ) (AList.ofList [ str visibility ]) 
    ]
@@ -310,8 +275,10 @@ let infoFooter =
    [ p []
        [ str "Double-click to edit a todo" ]
      p []
-       [ str "Ported from Elm by "
-         a [ Href "https://github.com/et1975" ] [ str "Eugene Tolmachev" ]]
+       [ str "Ported from " 
+         a [ Href "https://github.com/elmish/sample-react-todomvc" ] [ str "Elmish.TodoMVC" ]
+         str " by "
+         a [ Href "https://github.com/aardvark-platform" ] [ str "the Aardvark Team" ]]
      p []
        [ str "Part of "
          a [ Href "http://todomvc.com" ] [ str "TodoMVC" ]]
@@ -327,16 +294,10 @@ let view (model : AdaptiveModel) dispatch =
          viewControls model.visibility model.entries dispatch ]
      infoFooter ]
 
-let initMe () =
-    init None
-
-let updateMe (model : Model) (msg : Msg) : Model = update msg model
-   
-
 let app =
     {
-        init = initMe
-        update = updateMe
+        init = init
+        update = update
         view = view
         unpersist =
             {
@@ -346,14 +307,12 @@ let app =
     }
 
 open global.Browser
-let runMe () =
+let run () =
     let div = document.createElement "div"
     let link = document.createElement "link"
     link.setAttribute("rel","stylesheet")
     link.setAttribute("type","text/css")
     link.setAttribute("href","index.css")
-
     document.body.appendChild div |> ignore
     document.head.appendChild link |> ignore
-     
     App.run div None app |> ignore

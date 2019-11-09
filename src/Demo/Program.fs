@@ -9,6 +9,6 @@ let main argv =
         if document.readyState = "complete" then
             //AdaptiveListDemo.run()
             //SimpleApp.run()
-            TodoMvcApp.runMe()
+            TodoMVC.run()
     )
     0
