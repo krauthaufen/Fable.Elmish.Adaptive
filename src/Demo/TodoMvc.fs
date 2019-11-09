@@ -356,4 +356,4 @@ let runMe () =
     document.body.appendChild div |> ignore
     document.head.appendChild link |> ignore
      
-    App.run div (Some 5) app |> ignore
+    App.run div None app |> ignore
