@@ -60,8 +60,11 @@ type AttributeUpdater(node : Element, attributes : AttributeMap) =
                 | _ ->  
                     if name = "style" then
                         updateStyle node?style (HashMap.tryFind name old) None
+                    elif name = "className" then
+                        node.removeAttribute "class"
                     else
-                        node?(name) <- null
+                        node?(name) <- ""
+                        node.removeAttribute name
 
 
             | Set vv ->
