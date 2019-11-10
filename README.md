@@ -14,6 +14,7 @@ The Demo project currently contains two examples:
 * [SimpleApp.fs](https://github.com/krauthaufen/Fable.Elmish.Adaptive/blob/master/src/Demo/SimpleApp.fs) using elmish(ish) MVU updates.
   However since [Adaptify](https://github.com/krauthaufen/Adaptify) is not yet finished the example is limited to a *primitive* model.
 * [AdaptiveListDemo.fs](https://github.com/krauthaufen/Fable.Elmish.Adaptive/blob/master/src/Demo/AdaptiveListDemo.fs) using Fable.React.Adaptive for rendering an `alist` of nodes with the possiblity to insert/change/remove nodes (not using MVU style updates atm.)
+* [TodoMvc.fs](https://github.com/krauthaufen/Fable.Elmish.Adaptive/blob/master/src/Demo/TodoMvc.fs) is a port of fable's [react-todomvc](https://github.com/elmish/sample-react-todomvc) using our elmish(ish) view functions and [Adaptify](https://github.com/krauthaufen/Adaptify) for *adaptifying* its model. There's also a [live demo](https://aardvarkians.com/demo/TodoMVC/)
 
 #### Roadmap
 * complete `Fable.React.Adaptive`
