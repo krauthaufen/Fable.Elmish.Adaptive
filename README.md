@@ -1,7 +1,7 @@
 ### Fable.Elmish.Adaptive
 
 
-Aims to provide adaptive bindings for ELM-style UI in Fable.
+Aims to provide adaptive bindings for ELM-style UI in Fable.  
 In order to keep the view-code as compatible as possible our **AdaptiveComponents** are 
 directly implemented as `ReactComponent` and internally manage their DOM (directly modifying it without react knowing).
 Nonetheless it is worth mentioning that the component uses react for rendering its children again, maximizing compatibiity and leveraging react's reliable update logic. 
