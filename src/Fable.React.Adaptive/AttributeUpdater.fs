@@ -96,6 +96,10 @@ type AttributeUpdater(node : Element, attributes : AttributeMap) =
         )
         //) |> ignore
 
+    member x.Destroy() =
+        let old = reader.State
+        perform old (HashMap.computeDelta old HashMap.empty)
+
     member x.SetNode(newNode : Element) =
         if node <> newNode then
             let old = reader.State

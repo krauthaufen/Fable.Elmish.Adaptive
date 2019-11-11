@@ -161,6 +161,16 @@ type internal AdaptiveComponentState(tag : string, attributes : AttributeMap, ch
         res
 
     member x.Dispose() =
+        for e in cache do 
+            e.Unmount().``then``(function 
+                | Some e -> element.removeChild e |> ignore 
+                | None -> ()
+            ) |> ignore
+
+        match att with
+        | Some a -> a.Destroy()
+        | None -> ()
+
         marking.Dispose()
         attMarking.Dispose()
         children <- AList.empty
