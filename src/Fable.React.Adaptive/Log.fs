@@ -7,7 +7,7 @@ open Fable.JsHelpers
 
 type internal LogComponent(value : State<string * ReactElement>) =
     inherit Component<State<string * ReactElement>, State<string * ReactElement>>(value)
-    static do ComponentHelpers.setDisplayName<LogComponent,_,_> "Log"
+    //static do ComponentHelpers.setDisplayName<LogComponent,_,_> "Log"
     do base.setInitState { value = value.value }
 
     override x.componentWillUnmount() =
@@ -43,4 +43,45 @@ type internal LogComponent(value : State<string * ReactElement>) =
 module LogComponent =
     let create (name : string) (content : ReactElement) = 
         ofType<LogComponent, _, _> { value = (name, content) } []
+
+module AdaptiveComponents =
+    open Fable.Core.JsInterop
+    let mutable rendersPending = 0
+    let mutable callbacks = []
+    let mutable times = obj()
+
+    let addCallback c =
+        callbacks <- c :: callbacks
+
+    let startRender() =
+        rendersPending <- rendersPending + 1
+
+    let stopRender() =
+        rendersPending <- rendersPending - 1
+        if rendersPending = 0 then
+            for c in callbacks do
+                c ()
+
+    let getTimes() : Map<string, float> =
+        let res = times.Keys |> Seq.map (fun k -> k, times?(k)) |> Map.ofSeq
+        times <- obj()
+        res
+
+    let inline measure (group : string) (action : unit -> 'a) =
+        let start = Performance.now()
+        let res = action()
+        let dt = Performance.now() - start
+        if times?(group) then times?(group) <- times?(group) + dt
+        else times?(group) <- dt
+        res
+
+    let startMeasure (group : string) =
+        let start = Performance.now()
+        { new System.IDisposable with
+            member x.Dispose() =
+                let dt = Performance.now() - start
+                if times?(group) then times?(group) <- times?(group) + dt
+                else times?(group) <- dt
+        }
+
 

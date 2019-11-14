@@ -22,7 +22,7 @@ open Fable.JsHelpers
 /// override its `firstChild`, `appendChild`, `removeChild` by locally defining them 
 /// in order to make react beleive that the DOM it rendered is not modified, while
 /// we actually move the created element somewhere else in the DOM.
-type internal ReactPseudoParent() =
+type internal ReactPseudoParent private() =
 
     let e = document.createElement("div")
     let mutable child : Types.Node = null
@@ -48,12 +48,6 @@ type internal ReactPseudoParent() =
         e?appendChild <- fun (n : Types.Node) ->
             child <- n
             n.DefineProperty("parentNode", fun () -> e)
-
-            // let getter = n?__proto__?__lookupGetter__("parentNode")
-            // defineProperty n "realParentNode" (fun () ->
-            //     getter?call(n)
-            // )
-
             n
 
         // fake removeChild (removing the one and only child)
@@ -95,6 +89,9 @@ type internal ReactPseudoParent() =
                     success None
         )
 
+
+    static member Create() =
+        AdaptiveComponents.measure "pseudo" (fun () -> ReactPseudoParent())
 
 module internal ComponentHelpers =
     /// Sets the display name for a custom component.

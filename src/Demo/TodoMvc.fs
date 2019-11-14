@@ -11,16 +11,17 @@ let [<Literal>] ALL_TODOS = "all"
 let [<Literal>] ACTIVE_TODOS = "active"
 let [<Literal>] COMPLETED_TODOS = "completed"
 
-let emptyModel =
-   { entries = IndexList.empty
-     visibility = ALL_TODOS
-     field = ""
-     uid = 0 }
 
-let newEntry desc id =
+let newEntry desc =
  { description = desc
    completed = false
    editing = false }
+
+let emptyModel =
+   { entries = Seq.init 1 (fun i -> newEntry (sprintf "entry%d" i)) |> IndexList.ofSeq
+     visibility = ALL_TODOS
+     field = "" }
+
 
 
 let init() = emptyModel
@@ -58,9 +59,8 @@ let update (model:Model) (msg:Msg)  : Model =
        let xs = if System.String.IsNullOrEmpty model.field then
                    model.entries
                 else
-                   IndexList.prepend (newEntry model.field model.uid) model.entries
+                   IndexList.prepend (newEntry model.field) model.entries
        { model with
-           uid = model.uid + 1
            field = ""
            entries = xs }
 
@@ -164,6 +164,7 @@ let viewEntry (id : Index) (todo : AdaptiveEntry) dispatch =
          OnBlur (fun _ -> EditingEntry (id,false) |> dispatch)
          onEnter false (EditingEntry (id,false)) dispatch })
    ])
+   //|> withLogging "entry"
 
 let viewEntries (visibility : aval<string>) (model : AdaptiveModel) dispatch =
    let entries = model.entries
@@ -176,7 +177,7 @@ let viewEntries (visibility : aval<string>) (model : AdaptiveModel) dispatch =
         )
 
    let allCompleted =
-       model.AllCompleted
+       model.entries |> AList.forallA (fun e -> e.completed)
 
    let cssVisibility =
        AList.toAVal entries |> AVal.map ( fun l -> if l |> IndexList.isEmpty then "hidden" else "visible" )
@@ -296,13 +297,24 @@ let app =
             }
     }
 
+
+open Fable.Core.JsInterop
 open global.Browser
 let run () =
     let div = document.createElement "div"
     let link = document.createElement "link"
+
+    let rep = document.createElement "div"
+    rep.id <- "performance-report"
+    rep?style?position <- "fixed"
+    rep?style?top <- "10px"
+    rep?style?left <- "10px"
+    rep?style?width <- "300px"
+
     link.setAttribute("rel","stylesheet")
     link.setAttribute("type","text/css")
     link.setAttribute("href","index.css")
     document.body.appendChild div |> ignore
+    document.body.appendChild rep |> ignore
     document.head.appendChild link |> ignore
     App.run div None app |> ignore

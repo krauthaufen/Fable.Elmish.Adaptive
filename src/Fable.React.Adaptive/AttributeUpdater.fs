@@ -49,52 +49,52 @@ type AttributeUpdater(node : Element, attributes : AttributeMap) =
             | Remove -> style?(k) <- null
 
     let perform (old : HashMap<string, obj>) (ops : HashMapDelta<string, obj>) =    
-        for (name, op) in ops do
-            match op with
-            | Remove ->
-                match listeners.TryGetValue name with
-                | (true, l) ->
-                    listeners.Remove name |> ignore
-                    let evtName = evtName name
-                    node?removeEventListener(evtName, unbox l)
-                | _ ->  
-                    if name = "style" then
-                        updateStyle node?style (HashMap.tryFind name old) None
-                    elif name = "className" then
-                        node.removeAttribute "class"
-                    else
-                        node?(name) <- ""
-                        node.removeAttribute name
-
-
-            | Set vv ->
-                if JsType.isFunction vv then
-                    let handler = EventListener.wrap (unbox vv)
-                    let evtName = evtName name
+        AdaptiveComponents.measure "mutate" (fun () ->
+            for (name, op) in ops do
+                match op with
+                | Remove ->
                     match listeners.TryGetValue name with
-                    | (true, old) when old = handler ->
-                        ()
-                    | (true, old) -> 
-                        node?removeEventListener(evtName, unbox old)
-                        node?addEventListener(evtName, unbox handler)
-                        listeners.[name] <- handler
-                    | _ -> 
-                        node?addEventListener(evtName, unbox handler)
-                        listeners.[name] <- handler
-                elif name = "style" then
-                    updateStyle node?style (HashMap.tryFind name old) (Some vv)
-                else
-                    node?(name) <- vv
+                    | (true, l) ->
+                        listeners.Remove name |> ignore
+                        let evtName = evtName name
+                        node?removeEventListener(evtName, unbox l)
+                    | _ ->  
+                        if name = "style" then
+                            updateStyle node?style (HashMap.tryFind name old) None
+                        elif name = "className" then
+                            node.removeAttribute "class"
+                        else
+                            node?(name) <- ""
+                            node.removeAttribute name
 
+
+                | Set vv ->
+                    if JsType.isFunction vv then
+                        let handler = EventListener.wrap (unbox vv)
+                        let evtName = evtName name
+                        match listeners.TryGetValue name with
+                        | (true, old) when old = handler ->
+                            ()
+                        | (true, old) -> 
+                            node?removeEventListener(evtName, unbox old)
+                            node?addEventListener(evtName, unbox handler)
+                            listeners.[name] <- handler
+                        | _ -> 
+                            node?addEventListener(evtName, unbox handler)
+                            listeners.[name] <- handler
+                    elif name = "style" then
+                        updateStyle node?style (HashMap.tryFind name old) (Some vv)
+                    else
+                        node?(name) <- vv
+        )
 
     member x.Update(t : AdaptiveToken) =
-        //Timeout.set 0 (fun () ->
         x.EvaluateIfNeeded t () (fun t ->
+            
             let old = reader.State
-            let ops = reader.GetChanges t
+            let ops = AdaptiveComponents.measure "evalA" (fun () -> reader.GetChanges t)
             perform old ops
         )
-        //) |> ignore
 
     member x.Destroy() =
         let old = reader.State

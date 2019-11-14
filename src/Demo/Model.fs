@@ -35,6 +35,4 @@ type Entry =
 type Model = 
    { entries : IndexList<Entry>
      field : string
-     uid : int
      visibility : string }
-        member x.AllCompleted = x.entries |> IndexList.forall ( fun _ t -> t.completed )

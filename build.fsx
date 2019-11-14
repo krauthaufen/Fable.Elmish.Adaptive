@@ -97,6 +97,17 @@ Target.create "Watch" (fun _ ->
     |> ignore
 
 )
+Target.create "Fable" (fun _ ->
+    let wpds = "node_modules/webpack-cli/bin/cli.js" |> Path.GetFullPath
+    CreateProcess.fromRawCommand "node" [wpds; "-p"]
+    |> CreateProcess.withWorkingDirectory Environment.CurrentDirectory
+    |> CreateProcess.withStandardError StreamSpecification.Inherit
+    |> CreateProcess.withStandardOutput StreamSpecification.Inherit
+    |> CreateProcess.ensureExitCode
+    |> Proc.run
+    |> ignore
+
+)
 
 Target.create "Default" ignore
 
@@ -128,13 +139,17 @@ Target.create "GenerateDocs" (fun _ ->
     "DotNetCompile" ==>
     "Watch"
 
+"NpmInstall" ==> 
+    "DotNetCompile" ==>
+    "Fable"
+
 "DotNetCompile" ==> 
     "Docs"
     
 "DotNetCompile" ==> 
     "GenerateDocs"
 
-"DotNetCompile" ==> 
+"Fable" ==> 
     "Default"
 
 

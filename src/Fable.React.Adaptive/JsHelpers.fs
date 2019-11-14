@@ -49,7 +49,7 @@ module JsHelperExtensions =
 
     /// defineProperty wrapper.
     [<Emit("Object.defineProperty($0, $1, $2)")>]
-    let private defineProperty (o : obj) (name : string) (prop : obj) : unit = jsNative
+    let defineProperty (o : obj) (name : string) (prop : obj) : unit = jsNative
 
     type System.Object with
         /// Assigns all props from the given objects to this one.
@@ -68,13 +68,13 @@ module JsHelperExtensions =
         member inline x.Keys = System.Object.GetKeys x
 
         /// Defines a property for the object using a getter- and an optional setter-function.
-        member x.DefineProperty(name : string, getter : unit -> 'a, ?setter : 'a -> unit) =  
-            match setter with
-            | Some setter ->
-                defineProperty x name (createObj ["get", box getter; "set", box setter])
-            | None ->
-                defineProperty x name (createObj ["get", box getter])
-                
+        member inline x.DefineProperty(name : string, getter : unit -> 'a, setter : 'a -> unit) =  
+            defineProperty x name (createObj ["get", box getter; "set", box setter])
+
+        /// Defines a property for the object using a getter- and an optional setter-function.
+        member inline x.DefineProperty(name : string, getter : unit -> 'a) =  
+            defineProperty x name (createObj ["get", box getter])
+                                
     /// All function arguments for the currently executing function.
     [<Emit("arguments")>]
     let arguments : obj[] = jsNative
@@ -82,8 +82,6 @@ module JsHelperExtensions =
     type Fable.Core.JsInterop.JsFunc with
         /// All function arguments for the currently executing function.
         static member inline Arguments : obj[] = arguments
-
-
 
 
 module Log =
@@ -101,3 +99,43 @@ module Log =
         
     let inline stop() =
         console.groupEnd()
+
+
+[<AutoOpen>]
+module MyPromiseBuilder =
+    open Fable.Core.JS
+
+    type MyPromiseBuilder() =
+        
+        member inline x.Zero() = Promise.resolve ()
+
+        member inline x.Bind(p : Promise<'a>, mapping : 'a -> Promise<'b>) =
+            p.``then``(mapping) |> unbox<Promise<'b>>
+            
+        member inline x.Return(v : 'a) =
+            Promise.resolve v
+
+        member inline x.Delay(action : unit -> Promise<'a>) =
+            action
+            //Promise.Create(fun s e ->
+            //    action().``then``(s, e) |> ignore
+            //) |> unbox<Promise<'a>>
+
+        member inline x.Combine(l : Promise<unit>, r : unit -> Promise<'a>) =   
+            l.``then``(r) |> unbox<Promise<'a>>
+
+        member inline x.Run(action : unit -> Promise<'a>) = action()
+
+        member inline x.For(s : seq<'a>, mapping : 'a -> Promise<unit>) =
+            let rec run (mapping : 'a -> Promise<unit>) (e : System.Collections.Generic.IEnumerator<'a>) =
+                if e.MoveNext() then
+                    mapping(e.Current).``then``(fun () -> run mapping e) |> unbox<Promise<unit>>
+                else
+                    e.Dispose()
+                    Promise.resolve ()
+            let e = s.GetEnumerator()
+            run mapping e
+                
+    let prom = MyPromiseBuilder()
+
+
