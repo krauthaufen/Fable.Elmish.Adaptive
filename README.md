@@ -1,6 +1,6 @@
 ### Fable.Elmish.Adaptive
 
-![https://github.com/krauthaufen/Fable.Elmish.Adaptive/workflows/CI/badge.svg](https://github.com/krauthaufen/Fable.Elmish.Adaptive/workflows/CI/badge.svg)
+[![CI](https://github.com/krauthaufen/Fable.Elmish.Adaptive/workflows/CI/badge.svg)](https://github.com/krauthaufen/Fable.Elmish.Adaptive/actions?query=workflow%3ACI)
 
 Aims to provide adaptive bindings for ELM-style UI in Fable.  
 In order to keep the view-code as compatible as possible our **AdaptiveComponents** are 
