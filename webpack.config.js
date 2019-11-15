@@ -9,6 +9,9 @@ var production = process.argv.indexOf("-p") >= 0;
 
 module.exports = {
     mode: production ? "production" : "development",
+    optimization:{
+        minimize: false
+    },
     entry: {
         bundle: path.join(__dirname, "./src/Demo/Demo.fsproj"),
     },
@@ -27,7 +30,7 @@ module.exports = {
         clientLogLevel: 'error'
 
     },
-    devtool: production ? false : "eval-source-map",
+    devtool: "eval-source-map", //production ? false : "eval-source-map",
     module: {
         rules: [
 			{

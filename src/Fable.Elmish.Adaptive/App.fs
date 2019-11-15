@@ -143,6 +143,7 @@ module App =
                 fun msg ->
                     model <- app.update model msg
                     start <- Performance.now()
+
                     transact (fun () ->
                         app.unpersist.update amodel model
                         unpersistEnd <- Performance.now()

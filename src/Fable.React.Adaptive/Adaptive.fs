@@ -9,6 +9,7 @@ open Fable.React.ReactiveComponents
 open Fable.React.Props
 open FSharp.Data.Adaptive
 open Fable.JsHelpers
+open CollectionsJS
 
 type internal AdaptiveComponentProps =
     {   
@@ -17,17 +18,15 @@ type internal AdaptiveComponentProps =
         children    : alist<ReactElement>
     }
 
-type internal AdaptiveComponentState(tag : string, attributes : AttributeMap, children : alist<ReactElement>) =
-    static let noDisposable =
-        { new IDisposable with member x.Dispose() = () }
+type internal AdaptiveComponentState(attributes : AttributeMap, children : alist<ReactElement>) =
+    static let noDisposable = { new IDisposable with member x.Dispose() = () }
 
-    let mutable tag = tag
     let mutable children = children
     let mutable element : Types.Element = null
     let mutable parent : Types.Element = null
     let mutable reader : Option<IIndexListReader<ReactElement>> = None
     let mutable marking = noDisposable
-    let mutable cache : IndexList<ReactPseudoParent> = IndexList.empty
+    let mutable livingThigs : SortedMap<Index, ReactPseudoParent> = SortedMap.create()
 
     let mutable attributes = attributes
     let mutable attMarking = noDisposable
@@ -51,8 +50,6 @@ type internal AdaptiveComponentState(tag : string, attributes : AttributeMap, ch
             att <- Some u
             u
 
-
-
     let recreateReader(callback : unit -> unit) =
         let r = children.GetReader()
         let s = r.AddMarkingCallback callback
@@ -62,48 +59,67 @@ type internal AdaptiveComponentState(tag : string, attributes : AttributeMap, ch
         r
         
     let update (deltas : IndexListDelta<ReactElement>) =
-        promise {
-            for (index, op) in IndexListDelta.toSeq deltas do
-                match op with
-                | Set react ->  
-                    let (_l, self, right) = IndexList.neighbours index cache
-                    match self with
-                    | Some (_, dst) ->  
-                        let old = dst.Current
-                        let! n = dst.Render(react)
-                        if old <> n then element.replaceChild(n, old) |> ignore
+        prom {
+            if deltas.Count > 0 then
+                let t = AdaptiveComponents.startMeasure "alist"
+                Performance.mark "eval"
+                for (index, op) in IndexListDelta.toSeq deltas do
+                    match op with
+                    | Set react ->  
+                        do!
+                            livingThigs |> SortedMap.alterNeigboursPromise index (fun _l self right ->
+                                prom {
+                                    match self with
+                                    | Some dst ->  
+                                        let old = dst.Current
 
-                    | None ->
-                        match right with
-                        | Some (_ri, re) ->
-                            let parent = ReactPseudoParent()
-                            let! node = parent.Render(react)
-                            let re = re.Current
-                            element.insertBefore(node, re) |> ignore
-                            cache <- IndexList.set index parent cache
+                                        let d = AdaptiveComponents.startMeasure "renderChild"
+                                        let! n = dst.Render(react)
+                                        d.Dispose()
+                                        if old <> n then 
+                                            AdaptiveComponents.measure "mutate" (fun () -> element.replaceChild(n, old) |> ignore)
 
+                                        return self
+                                    | None ->
+                                        match right with
+                                        | Some re ->
+                                            let parent = ReactPseudoParent.Create()
+                                            let d = AdaptiveComponents.startMeasure "renderChild"
+                                            let! node = parent.Render(react)
+                                            d.Dispose()
+                                            let re = re.Current
+                                            AdaptiveComponents.measure "mutate" (fun () -> 
+                                                element.insertBefore(node, re) |> ignore
+                                            )
+                                            return Some parent
+
+                                        | None ->
+                                            let parent = ReactPseudoParent.Create()
+                                
+                                            let d = AdaptiveComponents.startMeasure "renderChild"
+                                            let! node = parent.Render(react)
+                                            d.Dispose()
+                                            AdaptiveComponents.measure "mutate" (fun () -> 
+                                                element.appendChild node |> ignore
+                                            )
+                                            return Some parent
+                                }
+                            )
+                    | Remove ->
+                        match SortedMap.tryRemove index livingThigs with
+                        | Some root ->
+                            match! root.Unmount() with
+                            | Some e -> AdaptiveComponents.measure "mutate" (fun () -> element.removeChild e |> ignore)
+                            | None -> ()
                         | None ->
-                            let parent = ReactPseudoParent()
-                            let! node = parent.Render(react)
-                            element.appendChild node |> ignore
-                            cache <- IndexList.set index parent cache
-
-                | Remove ->
-                    match IndexList.tryRemove index cache with
-                    | Some (root, rest) ->
-                        cache <- rest
-                        match! root.Unmount() with
-                        | Some e -> element.removeChild e |> ignore
-                        | None -> ()
-
-                    | None ->
-                        ()
-        } |> ignore
+                            ()
+                t.Dispose()
+            AdaptiveComponents.stopRender()
+        }
 
     member x.Children = children
-    member x.Tag = tag
 
-    member x.SetElement (e : Types.Element) =
+    member x.ReplaceElement (e : Types.Element) =
         if isNull e then 
             ()
         elif isNull element || element = e then
@@ -113,95 +129,107 @@ type internal AdaptiveComponentState(tag : string, attributes : AttributeMap, ch
             | Some att -> att.SetNode e
             | None -> ()
         else
-            promise {
-                for r in cache do
-                    let! c = r.Element
-                    e.appendChild c |> ignore
-                    ()
-            } |> ignore
+            failwith "not imcplemented"
+            //prom {
+            //    for r in cache do
+            //        let! c = r.Element
+            //        e.appendChild c |> ignore
+            //        ()
+            //} |> ignore
 
-            tag <- e.tagName.ToLower()
             element <- e
             parent <- e.parentElement
             match att with
             | Some att -> att.SetNode e
             | None -> ()
 
-    member x.Replace(newList : alist<ReactElement>, callback : unit -> unit) =
+    member x.ReplaceChildren (newList : alist<ReactElement>, callback : unit -> unit) =
         if children = newList then
             let r = getReader callback
-            update (r.GetChanges AdaptiveToken.Top)
+            update (AdaptiveComponents.measure "eval" (fun () -> r.GetChanges AdaptiveToken.Top)) |> ignore
         else
             children <- newList
             match reader with
             | Some oldReader ->
                 let newReader = recreateReader callback
-                newReader.GetChanges AdaptiveToken.Top |> ignore
-                let changes = IndexList.computeDelta oldReader.State newReader.State
-                update changes
-            | None ->
+                let changes =
+                    AdaptiveComponents.measure "eval" (fun () -> 
+                        newReader.GetChanges AdaptiveToken.Top |> ignore
+                        IndexList.computeDelta oldReader.State newReader.State
+                    )
+                update changes |> ignore
+            | None  ->
                 let r = getReader callback
-                update (r.GetChanges AdaptiveToken.Top)
-      
-    member x.ReplaceAttributes(newAttributes : AttributeMap, callback : unit -> unit) =
+                update (AdaptiveComponents.measure "eval" (fun () -> r.GetChanges AdaptiveToken.Top)) |> ignore
+
+    member x.ReplaceAttributes (newAttributes : AttributeMap, callback : unit -> unit) =
         let up = getAttributeUpdater callback
         if attributes <> newAttributes then
             attributes <- newAttributes
             up.SetAttributes newAttributes
         up.Update AdaptiveToken.Top
 
-            
-
-
-    member x.Update(callback : unit -> unit) =
-        let r = getReader callback
+    member x.Boot(callback : unit -> unit) =
         let u = getAttributeUpdater callback
-        let res = update (r.GetChanges AdaptiveToken.Top)
+        let r = getReader callback
         u.Update AdaptiveToken.Top
-        res
+        update (AdaptiveComponents.measure "eval" (fun () -> r.GetChanges AdaptiveToken.Top)) |> ignore
 
     member x.Dispose() =
-        for e in cache do 
-            e.Unmount().``then``(function 
-                | Some e -> element.removeChild e |> ignore 
-                | None -> ()
-            ) |> ignore
+        prom {
+            //failwith "not imp"
+            //for e in cache do 
+            //    match! e.Unmount() with
+            //    | Some e -> element.removeChild e |> ignore 
+            //    | None -> ()
 
-        match att with
-        | Some a -> a.Destroy()
-        | None -> ()
+            match att with
+            | Some a -> a.Destroy()
+            | None -> ()
 
-        marking.Dispose()
-        attMarking.Dispose()
-        children <- AList.empty
-        element <- null
-        reader <- None
-        marking <- noDisposable
-        cache <- IndexList.empty
-        attributes <- AMap.empty
-        attMarking <- noDisposable
-        att <- None
+            marking.Dispose()
+            attMarking.Dispose()
+            children <- AList.empty
+            element <- null
+            reader <- None
+            marking <- noDisposable
+            //cache <- IndexList.empty
+            attributes <- AttributeMap.empty
+            attMarking <- noDisposable
+            att <- None
+        } |> ignore
 
 type internal AdaptiveComponent(a : AdaptiveComponentProps)  =
     inherit Fable.React.Component<AdaptiveComponentProps, State<AdaptiveComponentState>>(a) 
-    static do ComponentHelpers.setDisplayName<AdaptiveComponent,_,_> "AList"
-    do base.setInitState({ value = AdaptiveComponentState(a.tag, a.attributes, a.children) })
+    static do ComponentHelpers.setDisplayName<AdaptiveComponent,_,_> "AdaptiveComponent"
+    do base.setInitState({ value = AdaptiveComponentState(a.attributes, a.children) })
        
-    member x.invalidate() =
-        Timeout.set 0 x.forceUpdate |> ignore
+    member x.invalidate() = 
+        AdaptiveComponents.startRender()
+        x.forceUpdate()
 
     member x.state = 
         base.state.value
 
     override x.componentDidMount() =
-        x.state.Update x.invalidate |> ignore
+        AdaptiveComponents.startRender()
+        x.state.Boot x.invalidate |> ignore
 
     override x.componentWillUnmount() =
         x.state.Dispose()
 
     override x.componentDidUpdate(_, _) =
-        x.state.Replace(x.props.children, x.invalidate) |> ignore
-        x.state.ReplaceAttributes(x.props.attributes, x.invalidate)
+        match Transaction.Running with
+        | Some t ->
+            let d = AdaptiveComponents.startMeasure "wait"
+            t.AddFinalizer (fun () ->
+                d.Dispose()
+                x.state.ReplaceAttributes(x.props.attributes, x.invalidate)
+                x.state.ReplaceChildren(x.props.children, x.invalidate) |> ignore
+            ) 
+        | None ->
+            x.state.ReplaceAttributes(x.props.attributes, x.invalidate)
+            x.state.ReplaceChildren(x.props.children, x.invalidate) |> ignore
 
     override x.shouldComponentUpdate(_,_) =
         true
@@ -209,56 +237,74 @@ type internal AdaptiveComponent(a : AdaptiveComponentProps)  =
     override x.render() =
         ReactBindings.React.createElement(
             x.props.tag, 
-            keyValueList CaseRules.LowerFirst [Ref x.state.SetElement], 
+            keyValueList CaseRules.LowerFirst [Ref x.state.ReplaceElement], 
             []
         )
-  
 
 
 type internal AdaptiveStringProps =
     {
         text : aval<string>
     }
-    
-type internal AdaptiveStringState(text : aval<string>, cb : unit -> unit) =
-    let mutable sub = text.AddMarkingCallback(cb)
-    let mutable text = text
 
-    member x.Current : string =
-        AVal.force text
+type internal AdaptiveStringState() =
+    static let noDisposable = { new IDisposable with member x.Dispose() = () }
 
-    member x.SetText(t : aval<string>, callback : unit -> unit) =
-        if text <> t then
+    let mutable value = AVal.constant ""
+    let mutable callback = fun () -> ()
+    let mutable sub = noDisposable
+    let mutable text = ""
+
+    member x.Text = text 
+
+    member x.Update(newValue : aval<string>, newCallback : unit -> unit) =
+        if value <> newValue then
             sub.Dispose()
-            sub <- t.AddMarkingCallback(callback)
-            text <- t
-        
+            value <- newValue
+            callback <- newCallback
+            sub <- value.AddMarkingCallback callback
+
+        text <- AVal.force newValue
+
     member x.Dispose() =
         sub.Dispose()
-        text <- AVal.constant ""
+        value <- AVal.constant ""
+        text <- ""
+        callback <- fun () -> ()
 
-type internal AdaptiveStringComponent(a : AdaptiveStringProps) as this  =
+type internal AdaptiveStringComponent(a : AdaptiveStringProps)  =
     inherit Fable.React.Component<AdaptiveStringProps, State<AdaptiveStringState>>(a) 
     static do ComponentHelpers.setDisplayName<AdaptiveComponent,_,_> "AList"
-    do base.setInitState({ value = AdaptiveStringState(a.text, this.invalidate) })
-       
-    member x.invalidate() =
-        Timeout.set 0 x.forceUpdate |> ignore
+    do base.setInitState({ value = AdaptiveStringState() })
 
     member x.state = 
         base.state.value
 
+    member x.invalidate() = 
+        AdaptiveComponents.startRender()
+        match Transaction.Running with
+        | Some t ->
+            let d = AdaptiveComponents.startMeasure "wait"
+            t.AddFinalizer (fun () ->
+                d.Dispose()
+                x.state.Update(x.props.text, x.invalidate)
+                AdaptiveComponents.stopRender()
+                x.forceUpdate()
+            )
+        | None -> 
+            x.state.Update(x.props.text, x.invalidate)
+            AdaptiveComponents.stopRender()
+            x.forceUpdate()
+        
     override x.componentWillUnmount() =
         x.state.Dispose()
 
     override x.componentDidUpdate(_, _) = 
-        x.state.SetText(x.props.text, x.invalidate)
-
-    override x.shouldComponentUpdate(_,_) =
-        true
+        x.state.Update(x.props.text, x.invalidate)
 
     override x.render() =
-        str x.state.Current 
+        x.state.Update(x.props.text, x.invalidate)
+        str x.state.Text 
 
 module AdaptiveComponent =
 
@@ -279,13 +325,27 @@ module AdaptiveComponent =
 
             let props =
                 attributes.Content
-                |> AVal.force
                 |> HashMap.toList
-                |> List.map (fun (k, v) -> HTMLAttr.Custom(k, v))
+                |> createObj
 
             let typ = Fable.React.ReactElementType.ofHtmlElement tag
-            Fable.React.ReactElementType.create typ (keyValueList CaseRules.LowerFirst props) children
-            
+            Fable.React.ReactElementType.create typ props children
+        //elif children.IsConstant then
+        //    let children =
+        //        children.Content
+        //        |> AVal.force
+        //        |> IndexList.toList
+                
+        //    let typ = Fable.React.ReactElementType.ofComponent<AdaptiveAttributesComponent,_,_>
+        //    Fable.React.ReactElementType.create typ { tag = tag; attributes = attributes; children = children } []
+        //elif attributes.IsConstant then
+        //    let props =
+        //        attributes.Content
+        //        |> AVal.force
+        //        |> HashMap.toList
+        //        |> List.map (fun (k, v) -> HTMLAttr.Custom(k, v) :> IProp)
+        //    let typ = Fable.React.ReactElementType.ofComponent<AdaptiveListComponent,_,_>
+        //    Fable.React.ReactElementType.create typ { tag = tag; attributes = props; children = children } []
         else
             let typ = Fable.React.ReactElementType.ofComponent<AdaptiveComponent,_,_>
             Fable.React.ReactElementType.create typ { tag = tag; attributes = attributes; children = children } []
