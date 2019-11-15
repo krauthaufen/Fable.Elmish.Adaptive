@@ -3,6 +3,8 @@
 [![CI - Linux](https://github.com/krauthaufen/Fable.Elmish.Adaptive/workflows/CI%20-%20Linux/badge.svg)](https://github.com/krauthaufen/Fable.Elmish.Adaptive/actions?query=workflow%3A%22CI+-+Linux%22)
 [![CI - Windows](https://github.com/krauthaufen/Fable.Elmish.Adaptive/workflows/CI%20-%20Windows/badge.svg)](https://github.com/krauthaufen/Fable.Elmish.Adaptive/actions?query=workflow%3A%22CI+-+Windows%22)
 
+Note that I'm currently experimenting with performance improvements, so until this is finished quality and performance may vary...
+
 Aims to provide adaptive bindings for ELM-style UI in Fable.  
 In order to keep the view-code as compatible as possible our **AdaptiveComponents** are 
 directly implemented as `ReactComponent` and internally manage their DOM (directly modifying it without react knowing).
