@@ -1,5 +1,7 @@
 ### Fable.Elmish.Adaptive
 
+[![CI - Linux](https://github.com/krauthaufen/Fable.Elmish.Adaptive/workflows/CI%20-%20Linux/badge.svg)](https://github.com/krauthaufen/Fable.Elmish.Adaptive/actions?query=workflow%3A%22CI+-+Linux%22)
+[![CI - Windows](https://github.com/krauthaufen/Fable.Elmish.Adaptive/workflows/CI%20-%20Windows/badge.svg)](https://github.com/krauthaufen/Fable.Elmish.Adaptive/actions?query=workflow%3A%22CI+-+Windows%22)
 
 Aims to provide adaptive bindings for ELM-style UI in Fable.  
 In order to keep the view-code as compatible as possible our **AdaptiveComponents** are 
