@@ -11,10 +11,11 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="JsHelpers.fs" />
+    <Compile Include="Collections.fs" />
     <Compile Include="AdaptiveHelpers.fs" />
+    <Compile Include="Log.fs" />
     <Compile Include="ReactHelpers.fs" />
     <Compile Include="Hooks.fs" />
-    <Compile Include="Log.fs" />
     <Compile Include="AttributeMap.fs" />
     <Compile Include="AttributeUpdater.fs" />
     <Compile Include="Adaptive.fs" />

@@ -28,6 +28,7 @@
     "webpack-dev-server": "^3.8.0"
   },
   "dependencies": {
+    "sorted-set-collections": "^1.0.0",
     "react": "^16.10.2",
     "react-dom": "^16.10.2"
   }

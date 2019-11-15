@@ -18,7 +18,7 @@ let newEntry desc =
    editing = false }
 
 let emptyModel =
-   { entries = Seq.init 1 (fun i -> newEntry (sprintf "entry%d" i)) |> IndexList.ofSeq
+   { entries = Seq.init 128 (fun i -> newEntry (sprintf "entry%d" i)) |> IndexList.ofSeq
      visibility = ALL_TODOS
      field = "" }
 
@@ -293,7 +293,7 @@ let app =
         unpersist =
             {
                 create = AdaptiveModel
-                update = fun t v -> t.update v
+                update = fun t v -> t.Update v
             }
     }
 

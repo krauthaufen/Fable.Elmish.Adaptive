@@ -10,6 +10,10 @@ module Performance =
     [<Emit("performance.now()")>]
     let now() : float = jsNative
 
+    [<Emit("performance.mark($0)")>]
+    let mark (name : string) : unit = jsNative
+
+
 /// JS timeout handle.
 [<AllowNullLiteral>]
 type Timeout = class end

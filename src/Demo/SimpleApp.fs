@@ -88,7 +88,7 @@ let app =
         unpersist =
             {
                 create = AdaptiveModel
-                update = fun t v -> t.update v
+                update = fun t v -> t.Update v
             }
     }
 
