@@ -64,8 +64,9 @@ type AttributeUpdater(node : Element, attributes : AttributeMap) =
                         elif name = "className" then
                             node.removeAttribute "class"
                         else
-                            node?(name) <- ""
-                            node.removeAttribute name
+                            if node?(name) then
+                                node?(name) <- ""
+                                node.removeAttribute name
 
 
                 | Set vv ->
@@ -85,7 +86,8 @@ type AttributeUpdater(node : Element, attributes : AttributeMap) =
                     elif name = "style" then
                         updateStyle node?style (HashMap.tryFind name old) (Some vv)
                     else
-                        node?(name) <- vv
+                        if node?(name) <> vv then
+                            node?(name) <- vv
         )
 
     member x.Update(t : AdaptiveToken) =

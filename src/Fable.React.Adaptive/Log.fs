@@ -63,25 +63,34 @@ module AdaptiveComponents =
                 c ()
 
     let getTimes() : Map<string, float> =
-        let res = times.Keys |> Seq.map (fun k -> k, times?(k)) |> Map.ofSeq
-        times <- obj()
-        res
+        Map.empty
+        //let res = times.Keys |> Seq.map (fun k -> k, times?(k)) |> Map.ofSeq
+        //times <- obj()
+        //res
 
     let inline measure (group : string) (action : unit -> 'a) =
-        let start = Performance.now()
-        let res = action()
-        let dt = Performance.now() - start
-        if times?(group) then times?(group) <- times?(group) + dt
-        else times?(group) <- dt
-        res
+        action()
+        //let start = Performance.now()
+        //let res = action()
+        //let dt = Performance.now() - start
+        //if times?(group) then times?(group) <- times?(group) + dt
+        //else times?(group) <- dt
+        //res
 
-    let startMeasure (group : string) =
-        let start = Performance.now()
+
+    let private emptyDisposable = 
         { new System.IDisposable with
-            member x.Dispose() =
-                let dt = Performance.now() - start
-                if times?(group) then times?(group) <- times?(group) + dt
-                else times?(group) <- dt
+            member x.Dispose() = ()
         }
+
+    let startMeasure (group : string) = 
+        emptyDisposable
+        //let start = Performance.now()
+        //{ new System.IDisposable with
+        //    member x.Dispose() =
+        //        let dt = Performance.now() - start
+        //        if times?(group) then times?(group) <- times?(group) + dt
+        //        else times?(group) <- dt
+        //}
 
 
