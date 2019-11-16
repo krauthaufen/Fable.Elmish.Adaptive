@@ -6,21 +6,24 @@ const CopyPlugin = require('copy-webpack-plugin');
 var path = require("path");
 
 var production = process.argv.indexOf("-p") >= 0;
+var debug = process.argv.indexOf("-g") >= 0;
+var outPath = debug ? "./bin/Fable/Debug" : "./bin/Fable/Release";
+
 
 module.exports = {
     mode: production ? "production" : "development",
     optimization:{
-        minimize: false
+        minimize: !debug
     },
     entry: {
         bundle: path.join(__dirname, "./src/Demo/Demo.fsproj"),
     },
     output: {
-        path: path.join(__dirname, "./bin/Fable"),
+        path: path.join(__dirname, outPath),
         filename: "[name].js",
     },
     devServer: {
-        contentBase: path.join(__dirname, "./bin/Fable"),
+        contentBase: path.join(__dirname, outPath),
         port: 8080,
         host: '0.0.0.0',
         headers: {
@@ -30,7 +33,7 @@ module.exports = {
         clientLogLevel: 'error'
 
     },
-    devtool: "eval-source-map", //production ? false : "eval-source-map",
+    devtool: (production && !debug) ? false : "eval-source-map",
     module: {
         rules: [
 			{
@@ -43,10 +46,8 @@ module.exports = {
     },
 	plugins: [
 	  new CopyPlugin([
-	    { from: path.join(__dirname, "./src/Demo/index.html"), to: path.join(__dirname, "./bin/Fable/index.html") }
-	  ]),
-      new CopyPlugin([
-            { from: path.join(__dirname,'./index.css') }
-        ])
+	    { from: path.join(__dirname, "./src/Demo/index.html"), to: path.join(path.join(__dirname, outPath), "./index.html") },
+	    { from: path.join(__dirname, "./src/Demo/index.css"), to: path.join(path.join(__dirname, outPath), "./index.css") }
+	  ])
     ]
 }

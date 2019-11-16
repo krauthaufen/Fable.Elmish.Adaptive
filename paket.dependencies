@@ -5,7 +5,7 @@ storage: none
 framework: netstandard2.0, netcoreapp2.2
 
 nuget FSharp.Core                           >= 4.7.0
-nuget FSharp.Data.Adaptive                  ~> 0.0.7
+nuget FSharp.Data.Adaptive                  ~> 0.0.8
 nuget Adaptify.MSBuild                      ~> 0.0.3
 nuget Fable.Core                            ~> 3.1.1
 nuget Fable.Browser.Dom                     ~> 1.1.0

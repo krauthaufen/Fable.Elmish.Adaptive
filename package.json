@@ -22,6 +22,7 @@
     "fable-compiler": "^2.3.19",
     "fable-loader": "^2.1.8",
     "fable-splitter": "^2.1.11",
+    "local-web-server": "^3.0.7",
     "npx": "^10.2.0",
     "webpack": "^4.39.2",
     "webpack-cli": "^3.3.6",

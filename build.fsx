@@ -18,13 +18,26 @@ let notes = ReleaseNotes.load "RELEASE_NOTES.md"
 let isWindows =
     Environment.OSVersion.Platform <> PlatformID.Unix && Environment.OSVersion.Platform <> PlatformID.MacOSX
 
+
+let del (dir : string) =
+    if Directory.Exists dir then
+        Trace.tracefn "deleting %s" dir
+        Directory.delete dir
+    elif File.Exists dir then
+        Trace.tracefn "deleting %s" dir
+        File.delete dir
+        
+
 Target.create "Clean" (fun _ ->
-    if Directory.Exists "bin/Debug" then
-        Trace.trace "deleting bin/Debug"
-        Directory.delete "bin/Debug"
-    if Directory.Exists "bin/Release" then
-        Trace.trace "deleting bin/Release"
-        Directory.delete "bin/Release"
+    del "bin/Debug"
+    del "bin/Release"
+    del "bin/Fable"
+    del ".fable"
+
+    let obj = !!"src/**/obj/"
+    for o in obj do
+        let isProject = Directory.GetFiles(Path.GetDirectoryName o, "*.fsproj").Length > 0
+        if isProject then del o
 
     let pkgs = !!"bin/*.nupkg" |> Seq.toList
     if not (List.isEmpty pkgs) then
@@ -97,7 +110,19 @@ Target.create "Watch" (fun _ ->
     |> ignore
 
 )
-Target.create "Fable" (fun _ ->
+Target.create "Debug" (fun _ ->
+    let wpds = "node_modules/webpack-cli/bin/cli.js" |> Path.GetFullPath
+    CreateProcess.fromRawCommand "node" [wpds; "-p"; "-g"]
+    |> CreateProcess.withWorkingDirectory Environment.CurrentDirectory
+    |> CreateProcess.withStandardError StreamSpecification.Inherit
+    |> CreateProcess.withStandardOutput StreamSpecification.Inherit
+    |> CreateProcess.ensureExitCode
+    |> Proc.run
+    |> ignore
+
+)
+
+Target.create "Release" (fun _ ->
     let wpds = "node_modules/webpack-cli/bin/cli.js" |> Path.GetFullPath
     CreateProcess.fromRawCommand "node" [wpds; "-p"]
     |> CreateProcess.withWorkingDirectory Environment.CurrentDirectory
@@ -108,6 +133,29 @@ Target.create "Fable" (fun _ ->
     |> ignore
 
 )
+
+Target.create "RunDebug" (fun _ ->
+    let http = "node_modules/local-web-server/bin/cli.js" |> Path.GetFullPath
+    let outDir = "bin/Fable/Debug" |> Path.GetFullPath
+    CreateProcess.fromRawCommand "node" [http; "--port"; "8080"; "--directory"; outDir]
+    |> CreateProcess.withStandardError StreamSpecification.Inherit
+    |> CreateProcess.withStandardOutput StreamSpecification.Inherit
+    |> CreateProcess.ensureExitCode
+    |> Proc.run
+    |> ignore
+)
+
+Target.create "RunRelease" (fun _ ->
+    let http = "node_modules/local-web-server/bin/cli.js" |> Path.GetFullPath
+    let outDir = "bin/Fable/Release" |> Path.GetFullPath
+    CreateProcess.fromRawCommand "node" [http; "--port"; "8080"; "--directory"; outDir]
+    |> CreateProcess.withStandardError StreamSpecification.Inherit
+    |> CreateProcess.withStandardOutput StreamSpecification.Inherit
+    |> CreateProcess.ensureExitCode
+    |> Proc.run
+    |> ignore
+)
+
 
 Target.create "Default" ignore
 
@@ -141,7 +189,14 @@ Target.create "GenerateDocs" (fun _ ->
 
 "NpmInstall" ==> 
     "DotNetCompile" ==>
-    "Fable"
+    "Debug"
+
+"Debug" ==> "RunDebug"
+"Release" ==> "RunRelease"
+
+"NpmInstall" ==> 
+    "DotNetCompile" ==>
+    "Release"
 
 "DotNetCompile" ==> 
     "Docs"
@@ -149,7 +204,7 @@ Target.create "GenerateDocs" (fun _ ->
 "DotNetCompile" ==> 
     "GenerateDocs"
 
-"Fable" ==> 
+"Debug" ==> 
     "Default"
 
 
