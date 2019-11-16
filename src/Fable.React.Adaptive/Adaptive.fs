@@ -324,7 +324,8 @@ module AdaptiveComponent =
                 |> IndexList.toList
 
             let props =
-                attributes.Content
+                attributes
+                |> AttributeMap.force
                 |> HashMap.toList
                 |> createObj
 

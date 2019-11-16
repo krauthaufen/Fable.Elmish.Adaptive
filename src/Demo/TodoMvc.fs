@@ -102,10 +102,9 @@ open Fable.Core.JsInterop
 open Elmish.React
 open Fable.React.Adaptive
 
-let internal onEnter clear msg dispatch =
+let internal onEnter msg dispatch =
    function
    | (ev:Browser.Types.KeyboardEvent) when ev.keyCode = ENTER_KEY ->
-       if clear then ev.target?value <- ""
        dispatch msg
    | _ -> ()
    |> OnKeyDown
@@ -117,8 +116,8 @@ let viewInput (model:aval<string>) dispatch =
            attr {
                ClassName "new-todo"
                Placeholder "What needs to be done?"
-               AVal.map valueOrDefault model
-               onEnter true Add dispatch
+               AVal.map (box >> Value) model
+               onEnter Add dispatch
                OnInput (fun ev -> !!ev.target?value |> UpdateField |> dispatch)
                AutoFocus true
            }
@@ -162,7 +161,7 @@ let viewEntry (id : Index) (todo : AdaptiveEntry) dispatch =
          Name "title"
          OnInput (fun ev -> UpdateEntry (id, !!ev.target?value) |> dispatch)
          OnBlur (fun _ -> EditingEntry (id,false) |> dispatch)
-         onEnter false (EditingEntry (id,false)) dispatch })
+         onEnter (EditingEntry (id,false)) dispatch })
    ])
    //|> withLogging "entry"
 

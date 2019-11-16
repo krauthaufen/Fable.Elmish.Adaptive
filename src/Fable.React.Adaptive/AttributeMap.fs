@@ -8,6 +8,8 @@ open Fable.JsHelpers
 open Browser
 open FSharp.Data.Traceable
 
+#if false
+
 type AttributeMapReader(constant : HashMap<string, Index * obj>, adaptive : IndexList<amap<string, obj>>) =
     inherit AbstractReader<HashMapDelta<string, obj>>(HashMapDelta.empty)
 
@@ -111,11 +113,10 @@ type AttributeMapReader(constant : HashMap<string, Index * obj>, adaptive : Inde
                 Remove
         ) |> HashMapDelta.ofHashMap
 
-type AttributeMap(content : IndexList<Choice<amap<string, obj>, HashMap<string, obj>>>) =
+type AttributeMap(isConstant : bool, content : IndexList<Choice<amap<string, obj>, HashMap<string, obj>>>) =
     
-    static let empty = AttributeMap(IndexList.empty)
+    static let empty = AttributeMap(true, IndexList.empty)
 
-            
     static let resolveOrdered (key : string) (l : obj) (r : obj) =
         if key = "className" then
             let res = string l + " " + string r |> box
@@ -138,13 +139,15 @@ type AttributeMap(content : IndexList<Choice<amap<string, obj>, HashMap<string, 
             r
 
     static let resolve (key : string) (li : Index) (ri : Index) (l : obj) (r : obj) =
-        let l, r = 
-            if li > ri then r, l
-            else l, r
-        let index = max li ri
-        let res = resolveOrdered key l r
-        index, res
+        if li > ri then li, resolveOrdered key r l
+        else ri, resolveOrdered key l r
 
+    static let addConstant (m : HashMap<string, obj>) (l : IndexList<Choice<amap<string, obj>, HashMap<string, obj>>>) =
+        match IndexList.tryLast l with
+        | Some (Choice2Of2 o) ->
+            IndexList.set l.MaxIndex (Choice2Of2 (HashMap.unionWith resolveOrdered o m)) l
+        | _ ->
+            IndexList.add (Choice2Of2 m) l
 
     static member Empty = empty
 
@@ -163,8 +166,7 @@ type AttributeMap(content : IndexList<Choice<amap<string, obj>, HashMap<string, 
             m
         )
 
-    member x.IsConstant =
-        content |> Seq.forall (function Choice2Of2 _ -> true | _ -> false)
+    member x.IsConstant = isConstant
 
     member x.GetReader() =  
         let constants =
@@ -186,26 +188,23 @@ type AttributeMap(content : IndexList<Choice<amap<string, obj>, HashMap<string, 
         AttributeMapReader(constants, adaptives)
         
     member x.Add(m : HashMap<string, obj>) =
-        AttributeMap(IndexList.add (Choice2Of2 m) content)
+        AttributeMap(x.IsConstant, addConstant m content)
 
     member x.Add(m : amap<string, obj>) =
-        if m.IsConstant then x.Add(AMap.force m)
-        else AttributeMap(IndexList.add (Choice1Of2 m) content)
+        if m.IsConstant then AttributeMap(x.IsConstant, addConstant (AMap.force m) content)
+        else AttributeMap(false, IndexList.add (Choice1Of2 m) content)
 
     new (m : HashMap<string, obj>) =
-        AttributeMap(IndexList.single (Choice2Of2 m))
+        AttributeMap(true, IndexList.single (Choice2Of2 m))
 
     new (m : amap<string, obj>) =
-        if m.IsConstant then AttributeMap(AMap.force m)
-        else AttributeMap(IndexList.single (Choice1Of2 m))
+        if m.IsConstant then AttributeMap(true, IndexList.single (Choice2Of2 (AMap.force m)))
+        else AttributeMap(false, IndexList.single (Choice1Of2 m))
         
 
     static member Union(l : AttributeMap, r : AttributeMap) =
         let c = IndexList.append l.Store r.Store
-        AttributeMap c
-
-
-
+        AttributeMap(l.IsConstant && r.IsConstant, c)
 
 module AttributeMap =
     [<Emit("$0.charAt(0).toLowerCase() + $0.slice(1)")>]
@@ -285,6 +284,8 @@ module AttributeMap =
     let union (l : AttributeMap) (r : AttributeMap) : AttributeMap =
         AttributeMap.Union(l, r)
 
+    let force (m : AttributeMap) = m.Content
+
     type Builder() =
         member inline x.Zero() = 
             empty
@@ -330,129 +331,133 @@ module AttributeMap =
         member inline x.Combine(l : AttributeMap, r : unit -> AttributeMap) =
             union l (r())
 
+#else
 
+type AttributeMap = amap<string, obj>
 
-//type AttributeMap = amap<string, obj>
+module AttributeMap =
+    [<Emit("$0.charAt(0).toLowerCase() + $0.slice(1)")>]
+    let private lowerFirst (str : string) : string = jsNative
 
-//module AttributeMap =
-//    [<Emit("$0.charAt(0).toLowerCase() + $0.slice(1)")>]
-//    let private lowerFirst (str : string) : string = jsNative
+    let private resolve (key : string) (l : obj) (r : obj) =
+        if key = "className" then
+            string l + " " + string r |> box
 
-//    let private resolve (key : string) (l : obj) (r : obj) =
-//        if key = "className" then
-//            string l + " " + string r |> box
-
-//        elif JsType.isFunction l && JsType.isFunction r then
-//            let l = unbox<JsFunc> l
-//            let r = unbox<JsFunc> r
-//            box <| fun () ->
-//                l.Invoke arguments |> ignore
-//                r.Invoke arguments |> ignore
-//        elif JsType.isObject l && JsType.isObject r then
-//            let res = obj()
-//            res.Assign(l)
-//            res.Assign(r)
-//            res
-//        else
-//            r
+        elif JsType.isFunction l && JsType.isFunction r then
+            let l = unbox<JsFunc> l
+            let r = unbox<JsFunc> r
+            box <| fun () ->
+                l.Invoke arguments |> ignore
+                r.Invoke arguments |> ignore
+        elif JsType.isObject l && JsType.isObject r then
+            let res = obj()
+            res.Assign(l)
+            res.Assign(r)
+            res
+        else
+            r
         
-//    let inline private toHashMap (p : seq<'T>) : HashMap<string, obj> =
-//        let mutable res = HashMap.empty
+    let inline private toHashMap (p : seq<'T>) : HashMap<string, obj> =
+        let mutable res = HashMap.empty
 
-//        for e in p do
-//            let name, value = 
-//                if e?name then
-//                    let name = e?name
-//                    let values : obj[] = e?fields
-//                    if values.Length > 1 then
-//                        unbox values.[0], values.[1]
-//                    else
-//                        name, values.[0]
-//                else
-//                    let arr = unbox<obj[]> e
-//                    string arr.[0], arr.[1]
+        for e in p do
+            let name, value = 
+                if e?name then
+                    let name = e?name
+                    let values : obj[] = e?fields
+                    if values.Length > 1 then
+                        unbox values.[0], values.[1]
+                    else
+                        name, values.[0]
+                else
+                    let arr = unbox<obj[]> e
+                    string arr.[0], arr.[1]
 
-//            let name = lowerFirst name
-//            res <- res |> HashMap.alter name (function Some o -> Some (resolve name o value) | None -> Some value)
+            let name = lowerFirst name
+            res <- res |> HashMap.alter name (function Some o -> Some (resolve name o value) | None -> Some value)
 
-//        res
+        res
 
-//    let empty : AttributeMap = AMap.empty<string, obj>
+    let empty : AttributeMap = AMap.empty<string, obj>
 
-//    let single (attr : IProp) : AttributeMap =
-//        toHashMap [| attr |] |> AMap.ofHashMap
+    let single (attr : IProp) : AttributeMap =
+        toHashMap [| attr |] |> AMap.ofHashMap
         
-//    let ofAValSingle (attr : aval<#IProp>) : AttributeMap =
-//        attr
-//        |> AVal.map (fun a -> toHashMap [| a |])
-//        |> AMap.ofAVal
+    let ofAValSingle (attr : aval<#IProp>) : AttributeMap =
+        attr
+        |> AVal.map (fun a -> toHashMap [| a |])
+        |> AMap.ofAVal
         
-//    let ofAValOption (attr : aval<option<#IProp>>) : AttributeMap =
-//        attr
-//        |> AVal.map (function Some a -> toHashMap [| a |] | _ -> HashMap.empty)
-//        |> AMap.ofAVal
+    let ofAValOption (attr : aval<option<#IProp>>) : AttributeMap =
+        attr
+        |> AVal.map (function Some a -> toHashMap [| a |] | _ -> HashMap.empty)
+        |> AMap.ofAVal
 
-//    let ofAVal (attr : aval<#seq<#IProp>>) : AttributeMap =
-//        attr
-//        |> AVal.map (fun a -> toHashMap (a :> seq<_>))
-//        |> AMap.ofAVal
+    let ofAVal (attr : aval<#seq<#IProp>>) : AttributeMap =
+        attr
+        |> AVal.map (fun a -> toHashMap (a :> seq<_>))
+        |> AMap.ofAVal
  
-//    let ofSeq (l : seq<#IProp>) : AttributeMap = 
-//        toHashMap l |> AMap.ofHashMap
+    let ofSeq (l : seq<#IProp>) : AttributeMap = 
+        toHashMap l |> AMap.ofHashMap
 
-//    let ofList (l : list<#IProp>) : AttributeMap = 
-//        toHashMap l |> AMap.ofHashMap
+    let ofList (l : list<#IProp>) : AttributeMap = 
+        toHashMap l |> AMap.ofHashMap
 
-//    let ofArray (l : array<#IProp>) : AttributeMap = 
-//        toHashMap l |> AMap.ofHashMap
+    let ofArray (l : array<#IProp>) : AttributeMap = 
+        toHashMap l |> AMap.ofHashMap
         
-//    let union (l : AttributeMap) (r : AttributeMap) : AttributeMap =
-//        AMap.unionWith resolve l r
+    let union (l : AttributeMap) (r : AttributeMap) : AttributeMap =
+        AMap.unionWith resolve l r
 
-//    type Builder() =
-//        member inline x.Zero() = 
-//            empty
+    let force (m : AttributeMap) = AMap.force m
 
-//        member inline x.Yield (attr : IProp) = 
-//            single attr
+    type Builder() =
+        member inline x.Zero() = 
+            empty
+
+        member inline x.Yield (attr : IProp) = 
+            single attr
              
-//        member inline x.Yield (attr : aval<#IProp>) =
-//            ofAValSingle attr
+        member inline x.Yield (attr : aval<#IProp>) =
+            ofAValSingle attr
 
-//        member inline x.Yield (attr : aval<option<#IProp>>) =
-//            ofAValOption attr
+        member inline x.Yield (attr : aval<option<#IProp>>) =
+            ofAValOption attr
 
-//        member inline x.Yield (attr : aval<seq<#IProp>>) =
-//            ofAVal attr
+        member inline x.Yield (attr : aval<seq<#IProp>>) =
+            ofAVal attr
             
-//        member inline x.Yield (attr : aval<list<#IProp>>) =
-//            ofAVal attr
+        member inline x.Yield (attr : aval<list<#IProp>>) =
+            ofAVal attr
             
-//        member inline x.Yield (attr : aval<array<#IProp>>) =
-//            ofAVal attr
+        member inline x.Yield (attr : aval<array<#IProp>>) =
+            ofAVal attr
 
 
-//        member inline x.YieldFrom(attr : AttributeMap) =
-//            attr
+        member inline x.YieldFrom(attr : AttributeMap) =
+            attr
 
-//        member inline x.Delay (action : unit -> AttributeMap) =
-//            action
+        member inline x.Delay (action : unit -> AttributeMap) =
+            action
 
-//        member inline x.Run(action : unit -> AttributeMap) =
-//            action()
+        member inline x.Run(action : unit -> AttributeMap) =
+            action()
 
-//        member inline x.For(elements : seq<'T>, mapping : 'T -> AttributeMap) =
-//            (empty, elements) ||> Seq.fold (fun s e -> union s (mapping e))
+        member inline x.For(elements : seq<'T>, mapping : 'T -> AttributeMap) =
+            (empty, elements) ||> Seq.fold (fun s e -> union s (mapping e))
             
 
-//        member inline x.While(guard : unit -> bool, body : unit -> AttributeMap) =
-//            let mutable res = empty
-//            while guard() do
-//                res <- union res (body())
-//            res
+        member inline x.While(guard : unit -> bool, body : unit -> AttributeMap) =
+            let mutable res = empty
+            while guard() do
+                res <- union res (body())
+            res
 
-//        member inline x.Combine(l : AttributeMap, r : unit -> AttributeMap) =
-//            union l (r())
+        member inline x.Combine(l : AttributeMap, r : unit -> AttributeMap) =
+            union l (r())
+
+#endif
 
 [<AutoOpen>]
 module AttributeMapBuilder =
