@@ -18,6 +18,12 @@ type internal AdaptiveComponentProps =
         children    : alist<ReactElement>
     }
 
+[<RequireQualifiedAccess>]
+type internal ChildOperation =
+    | Add of Index * ReactPseudoParent * Types.Node
+    | Update of Types.Node * Types.Node
+    | Remove of Index * option<Types.Node>
+
 type internal AdaptiveComponentState(attributes : AttributeMap, children : alist<ReactElement>) =
     static let noDisposable = { new IDisposable with member x.Dispose() = () }
 
@@ -59,63 +65,131 @@ type internal AdaptiveComponentState(attributes : AttributeMap, children : alist
         r
         
     let update (deltas : IndexListDelta<ReactElement>) =
-        prom {
-            if deltas.Count > 0 then
-                let t = AdaptiveComponents.startMeasure "alist"
-                Performance.mark "eval"
-                for (index, op) in IndexListDelta.toSeq deltas do
+        
+        if deltas.Count > 0 then
+            AdaptiveComponents.startRender()
+
+            let rendering = AdaptiveComponents.startMeasure "ReactDom.render"
+
+            let all = 
+                IndexListDelta.toList deltas 
+                |> List.choose (fun (index, op) ->
+                    let s = SortedMap.tryFind index livingThigs
                     match op with
-                    | Set react ->  
-                        do!
-                            livingThigs |> SortedMap.alterNeigboursPromise index (fun _l self right ->
-                                prom {
-                                    match self with
-                                    | Some dst ->  
-                                        let old = dst.Current
+                    | Set react ->
+                        match s with
+                        | Some s -> 
+                            let old = s.Current
+                            let mapping (n : Types.Node) =
+                                if n <> old then Some (ChildOperation.Update(old, n))
+                                else None
 
-                                        let d = AdaptiveComponents.startMeasure "renderChild"
-                                        let! n = dst.Render(react)
-                                        d.Dispose()
-                                        if old <> n then 
-                                            AdaptiveComponents.measure "mutate" (fun () -> element.replaceChild(n, old) |> ignore)
-
-                                        return self
-                                    | None ->
-                                        match right with
-                                        | Some re ->
-                                            let parent = ReactPseudoParent.Create()
-                                            let d = AdaptiveComponents.startMeasure "renderChild"
-                                            let! node = parent.Render(react)
-                                            d.Dispose()
-                                            let re = re.Current
-                                            AdaptiveComponents.measure "mutate" (fun () -> 
-                                                element.insertBefore(node, re) |> ignore
-                                            )
-                                            return Some parent
-
-                                        | None ->
-                                            let parent = ReactPseudoParent.Create()
-                                
-                                            let d = AdaptiveComponents.startMeasure "renderChild"
-                                            let! node = parent.Render(react)
-                                            d.Dispose()
-                                            AdaptiveComponents.measure "mutate" (fun () -> 
-                                                element.appendChild node |> ignore
-                                            )
-                                            return Some parent
-                                }
-                            )
-                    | Remove ->
-                        match SortedMap.tryRemove index livingThigs with
-                        | Some root ->
-                            match! root.Unmount() with
-                            | Some e -> AdaptiveComponents.measure "mutate" (fun () -> element.removeChild e |> ignore)
-                            | None -> ()
+                            s.Render(react) 
+                            |> Promise.map mapping
+                            |> Some
                         | None ->
-                            ()
-                t.Dispose()
+                            let parent = ReactPseudoParent.Create()
+                            parent.Render(react) 
+                            |> Promise.map (fun n -> Some (ChildOperation.Add(index, parent, n)))
+                            |> Some
+                    | Remove ->
+                        match s with
+                        | Some s ->
+                            s.Unmount()
+                            |> Promise.map (fun n -> Some (ChildOperation.Remove(index, n)))
+                            |> Some
+                        | None ->
+                            None
+                )
+                
+            all |> Promise.all |> Promise.map (fun all ->
+                rendering.Dispose()
+                let mutate = AdaptiveComponents.startMeasure "mutate"
+                for op in all do
+                    match op with
+                    | Some (ChildOperation.Update (o, n)) ->
+                        element.replaceChild(n, o)  |> ignore
+                    | Some (ChildOperation.Add(index, p, n)) ->
+                        livingThigs |> SortedMap.alterNeigbours index (fun right ->
+                            match right with
+                            | Some r ->
+                                element.insertBefore(n, r.Current) |> ignore
+                            | None ->
+                                element.appendChild(n) |> ignore
+                            Some p
+                        )
+                    | Some (ChildOperation.Remove(index, o)) ->  
+                        match o with
+                        | Some o -> 
+                            element.removeChild(o) |> ignore
+                        | None -> ()
+                        SortedMap.tryRemove index livingThigs |> ignore
+                    | None ->
+                        ()
+
+                mutate.Dispose()
+                AdaptiveComponents.stopRender()
+                AdaptiveComponents.stopRender()
+            )
+        else
             AdaptiveComponents.stopRender()
-        }
+            Promise.lift ()
+                //for (index, op) in IndexListDelta.toSeq deltas do
+                //    match op with
+                //    | Set react ->  
+                //        do!
+                //            let t = AdaptiveComponents.startMeasure "alterNeigbours"
+                //            livingThigs |> SortedMap.alterNeigboursPromise index (fun _l self right ->
+                //                prom {
+                //                    t.Dispose()
+                //                    match self with
+                //                    | Some dst ->  
+                //                        let old = dst.Current
+
+                //                        let d = AdaptiveComponents.startMeasure "render"
+                //                        let! n = dst.Render(react)
+                //                        d.Dispose()
+                //                        if old <> n then 
+                //                            AdaptiveComponents.measure "mutate" (fun () -> element.replaceChild(n, old) |> ignore)
+
+                //                        return self
+                //                    | None ->
+                //                        match right with
+                //                        | Some re ->
+                //                            let parent = ReactPseudoParent.Create()
+                //                            let d = AdaptiveComponents.startMeasure "render"
+                //                            let! node = parent.Render(react)
+                //                            d.Dispose()
+                //                            let re = re.Current
+                //                            AdaptiveComponents.measure "mutate" (fun () -> 
+                //                                element.insertBefore(node, re) |> ignore
+                //                            )
+                //                            return Some parent
+
+                //                        | None ->
+                //                            let parent = ReactPseudoParent.Create()
+                                
+                //                            let d = AdaptiveComponents.startMeasure "render"
+                //                            let! node = parent.Render(react)
+                //                            d.Dispose()
+                //                            AdaptiveComponents.measure "mutate" (fun () -> 
+                //                                element.appendChild node |> ignore
+                //                            )
+                //                            return Some parent
+                //                }
+                //            )
+                //    | Remove ->
+                //        match SortedMap.tryRemove index livingThigs with
+                //        | Some root ->
+                //            let d = AdaptiveComponents.startMeasure "unmount"
+                //            match! root.Unmount() with
+                //            | Some e -> 
+                //                d.Dispose()
+                //                AdaptiveComponents.measure "mutate" (fun () -> element.removeChild e |> ignore)
+                //            | None -> ()
+                //        | None ->
+                //            ()
+            
 
     member x.Children = children
 
@@ -129,7 +203,7 @@ type internal AdaptiveComponentState(attributes : AttributeMap, children : alist
             | Some att -> att.SetNode e
             | None -> ()
         else
-            failwith "not imcplemented"
+            failwith "not implemented"
             //prom {
             //    for r in cache do
             //        let! c = r.Element
@@ -205,8 +279,10 @@ type internal AdaptiveComponent(a : AdaptiveComponentProps)  =
     do base.setInitState({ value = AdaptiveComponentState(a.attributes, a.children) })
        
     member x.invalidate() = 
-        AdaptiveComponents.startRender()
-        x.forceUpdate()
+        AdaptiveComponents.measure "forceUpdate" (fun () ->
+            AdaptiveComponents.startRender()
+            x.forceUpdate()
+        )
 
     member x.state = 
         base.state.value
@@ -221,9 +297,7 @@ type internal AdaptiveComponent(a : AdaptiveComponentProps)  =
     override x.componentDidUpdate(_, _) =
         match Transaction.Running with
         | Some t ->
-            let d = AdaptiveComponents.startMeasure "wait"
             t.AddFinalizer (fun () ->
-                d.Dispose()
                 x.state.ReplaceAttributes(x.props.attributes, x.invalidate)
                 x.state.ReplaceChildren(x.props.children, x.invalidate) |> ignore
             ) 
@@ -281,21 +355,17 @@ type internal AdaptiveStringComponent(a : AdaptiveStringProps)  =
         base.state.value
 
     member x.invalidate() = 
-        AdaptiveComponents.startRender()
         match Transaction.Running with
         | Some t ->
-            let d = AdaptiveComponents.startMeasure "wait"
             t.AddFinalizer (fun () ->
-                d.Dispose()
                 x.state.Update(x.props.text, x.invalidate)
-                AdaptiveComponents.stopRender()
                 x.forceUpdate()
             )
         | None -> 
             x.state.Update(x.props.text, x.invalidate)
-            AdaptiveComponents.stopRender()
             x.forceUpdate()
         
+
     override x.componentWillUnmount() =
         x.state.Dispose()
 

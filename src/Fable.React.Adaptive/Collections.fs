@@ -72,17 +72,16 @@ module SortedMap =
         if isNull node then None
         else Some node.value.value
 
-    //let neigbours (key : 'K) (set : SortedMap<'K, 'V>) =
-    //    let foo = { key = key; value = Unchecked.defaultof<_> }
-        
-    //    let left = set.store.TryFindLeft foo
-    //    let self = set.store.TryFind foo
-    //    let right = set.store.TryFindRight foo
+    let neigbours (key : 'K) (set : SortedMap<'K, 'V>) =
+        let foo = { key = key; value = Unchecked.defaultof<_> }
+        let left = set.store.TryFindLeft foo
+        let self = set.store.TryFind foo
+        let right = set.store.TryFindRight foo
 
-    //    let l = if isNull left then None else Some left.value
-    //    let s = if isNull self then None else Some self.value
-    //    let r = if isNull right then None else Some right.value
-    //    (l, s, r)
+        let l = if isNull left then None else Some left.value.value
+        let s = if isNull self then None else Some self.value.value
+        let r = if isNull right then None else Some right.value.value
+        (l, s, r)
 
     let tryRemove (key : 'K) (set : SortedMap<'K, 'V>) =
         let foo = { key = key; value = Unchecked.defaultof<_> }
@@ -93,18 +92,18 @@ module SortedMap =
             set.store.Remove self.value |> ignore
             Some self.value.value
 
-    let alterNeigbours (key : 'K) (update : Option<'V> -> Option<'V> -> Option<'V> -> Option<'V>) (set : SortedMap<'K, 'V>) =
+    let alterNeigbours (key : 'K) (update : Option<'V> -> Option<'V>) (set : SortedMap<'K, 'V>) =
         
         let foo = { key = key; value = Unchecked.defaultof<_> }
-        let left = set.store.TryFindLeft foo
+        //let left = set.store.TryFindLeft foo
         let self = set.store.TryFind foo
         let right = set.store.TryFindRight foo
 
-        let l = if isNull left then None else Some left.value.value
-        let s = if isNull self then None else Some self.value.value
+        //let l = if isNull left then None else Some left.value.value
+        //let s = if isNull self then None else Some self.value.value
         let r = if isNull right then None else Some right.value.value
 
-        match update l s r with
+        match update r with
         | Some res ->
             if isNull self then
                 foo.value <- res

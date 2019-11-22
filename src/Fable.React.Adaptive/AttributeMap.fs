@@ -8,7 +8,7 @@ open Fable.JsHelpers
 open Browser
 open FSharp.Data.Traceable
 
-#if BLA
+#if !BLA
 
 type AttributeMapReader(constant : HashMap<string, Index * obj>, adaptive : IndexList<amap<string, obj>>) =
     inherit AbstractReader<HashMapDelta<string, obj>>(HashMapDelta.empty)

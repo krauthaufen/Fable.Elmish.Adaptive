@@ -78,10 +78,10 @@ type internal ReactPseudoParent private() =
     member x.Unmount() =
         run (fun success error ->
             let old = child
+            let res = ReactDom.unmountComponentAtNode e
             if isNull old then
                 success None
             else
-                let res = ReactDom.unmountComponentAtNode e
                 if res then
                     child <- null
                     success (Some old)

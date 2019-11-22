@@ -84,20 +84,16 @@ module App =
 
     let run (parent : Browser.Types.Element) (batchTime : Option<int>) (app : App<'Model, 'AdaptiveModel, 'Message>) =
         let mutable model = app.init()
-        let mutable startRender = Performance.now()
-        let mutable start = startRender
-        let mutable unpersistEnd = startRender
-        let mutable commitEnd = startRender
+        let mutable flushEnd = Performance.now()
+        let mutable start = Performance.now()
 
         let amodel = app.unpersist.create model
         Fable.React.Adaptive.AdaptiveComponents.addCallback (fun time ->
+
             let now = Performance.now()
             let total = now - start
-            let render = now - startRender
-            let unpersist = unpersistEnd - start
-            let transact = commitEnd - unpersistEnd
-            let react = startRender - commitEnd
-
+            Fable.React.Adaptive.AdaptiveComponents.addTime "wait" (now - flushEnd)
+            
             let stats = Fable.React.Adaptive.AdaptiveComponents.getTimes()
 
             let dst = Browser.Dom.document.getElementById("performance-report")
@@ -105,59 +101,57 @@ module App =
                 let fmt = sprintf "%.2fms"
                 let bb = Style [BorderTop "1px solid black"; BorderLeft "none"; BorderRight "none"]
                 let padding = Style [PaddingRight "20px"]
+
+                let mutable sum = 0.0
                 let rep =
-                    table [ Style [FontFamily "monospace"; BorderCollapse "collapse"] ] [
+                    table [Style [FontFamily "monospace"; BorderCollapse "collapse"]] [
                         tbody [] [
-                            tr [] [ td [padding] [ str "unpersist" ]; td [] [str (fmt unpersist) ]]
-                            tr [] [ td [padding; bb] [ str "commit" ]; td [bb] [str (fmt transact) ]]
-                            tr [] [ td [padding; bb] [ str "render" ]; td [bb] [str (fmt react) ]]
-                            tr [] [ td [padding; bb] [ str "wait" ]; td [bb] [str (fmt render) ]]
-                            tr [] [ td [padding; bb] [ str "total" ]; td [bb] [str (fmt total) ]]
-                            //tr [] [     
-                            //    td [ Style [VerticalAlign "top"]; bb ] [ str "times" ]
-                            //    td [ bb ] [
-                            //        table [Style [BorderCollapse "collapse"]] [
-                            //            tbody [] [
-                            //                let mutable i = 0
-                            //                for (k,v) in Map.toSeq stats do
-                            //                    let atts =
-                            //                        if i <> 0 then [padding:> IHTMLProp; bb :> IHTMLProp]
-                            //                        else [padding :> IHTMLProp ]
-                            //                    tr [] [ td atts [ str k ]; td atts [str (fmt v) ]]
-                            //                    i <- i + 1
-                            //            ]
-                            //        ]
-                            //    ]
-                            //]
+                            let mutable i = 0
+                            for (k,v) in Map.toSeq stats do
+                                let atts =
+                                    if i <> 0 then [padding:> IHTMLProp; bb :> IHTMLProp]
+                                    else [padding :> IHTMLProp ]
+                                tr [] [ td atts [ str k ]; td atts [str (fmt v) ]]
+                                i <- i + 1
+                                sum <- sum + v
+
+                            tr [] [ td [padding:> IHTMLProp; bb :> IHTMLProp] [ str "unknown" ]; td [padding:> IHTMLProp; bb :> IHTMLProp] [str (fmt (total - sum)) ]]
+
+                            tr [] [ td [padding:> IHTMLProp; bb :> IHTMLProp] [ str "total" ]; td [padding:> IHTMLProp; bb :> IHTMLProp] [str (fmt total) ]]
                         ]
                     ]
+                         
                 ReactDom.render(rep, dst)
         )
         let emit =
             let batchTime = defaultArg batchTime -1
             startThread batchTime (fun msgs ->
                 model <- (model, msgs) ||> Seq.fold app.update
+
                 start <- Performance.now()
-
-
+                let dd = Fable.React.Adaptive.AdaptiveComponents.startMeasure "unpersist"
                 let t = new Transaction()
                 Transaction.using t (fun () ->
                     app.unpersist.update amodel model
-                    unpersistEnd <- Performance.now()
                 )
+                dd.Dispose()
+
+                let dd = Fable.React.Adaptive.AdaptiveComponents.startMeasure "transact"
                 t.Commit()
-                commitEnd <- Performance.now()
+                dd.Dispose()
+                
+                let dd = Fable.React.Adaptive.AdaptiveComponents.startMeasure "dispose"
                 t.Dispose()
-                startRender <- Performance.now()
+                dd.Dispose()
+                flushEnd <- Performance.now()
+
             )
             
 
         let view = app.view amodel emit
         start <- Performance.now()
-        unpersistEnd <- start
-        commitEnd <- start
+        flushEnd <- start
         ReactDom.render(view, parent)
-        startRender <- Performance.now()
 
         { new IDisposable with 
             member x.Dispose() =

@@ -49,6 +49,50 @@ module AdaptiveComponents =
     let mutable rendersPending = 0
     let mutable callbacks = []
     let mutable times = obj()
+    
+    let mutable suspended : list<string> = []
+    let mutable activeGroup = None
+    let mutable activeStart = 0.0
+
+    let inline addTime (group : string) (dt : float) =
+        if times?(group) then times?(group) <- times?(group) + dt
+        else times?(group) <- dt
+        
+
+    let start (name : string) =
+        let now = Performance.now()
+        match activeGroup with
+        | Some old ->
+            addTime old (now - activeStart)
+            suspended <- old :: suspended
+        | None ->
+            ()
+
+        activeGroup <- Some name
+        activeStart <- now
+
+    let stop() =
+        let now = Performance.now()
+        match activeGroup with
+        | Some old ->
+            addTime old (now - activeStart)
+            activeGroup <- None
+            activeStart <- 0.0
+            match suspended with
+            | h :: t ->
+                activeGroup <- Some h
+                activeStart <- now
+                suspended <- t
+            | [] ->
+                ()
+        | None ->
+            ()
+        
+
+
+        
+
+
 
     let addCallback c =
         callbacks <- c :: callbacks
@@ -63,20 +107,15 @@ module AdaptiveComponents =
                 c ()
 
     let getTimes() : Map<string, float> =
-        Map.empty
-        //let res = times.Keys |> Seq.map (fun k -> k, times?(k)) |> Map.ofSeq
-        //times <- obj()
-        //res
+        let res = times.Keys |> Seq.map (fun k -> k, times?(k)) |> Map.ofSeq
+        times <- obj()
+        res
 
     let inline measure (group : string) (action : unit -> 'a) =
-        action()
-        //let start = Performance.now()
-        //let res = action()
-        //let dt = Performance.now() - start
-        //if times?(group) then times?(group) <- times?(group) + dt
-        //else times?(group) <- dt
-        //res
-
+        start group
+        let res = action()
+        stop()
+        res
 
     let private emptyDisposable = 
         { new System.IDisposable with
@@ -84,13 +123,9 @@ module AdaptiveComponents =
         }
 
     let startMeasure (group : string) = 
-        emptyDisposable
-        //let start = Performance.now()
-        //{ new System.IDisposable with
-        //    member x.Dispose() =
-        //        let dt = Performance.now() - start
-        //        if times?(group) then times?(group) <- times?(group) + dt
-        //        else times?(group) <- dt
-        //}
+        start group
+        { new System.IDisposable with
+            member x.Dispose() = stop()
+        }
 
 
