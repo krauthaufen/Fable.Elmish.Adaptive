@@ -1,2 +1,2 @@
-### 0.0.1-prerelease01
+### 0.0.1
 * initial version

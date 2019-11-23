@@ -183,6 +183,89 @@ Target.create "GenerateDocs" (fun _ ->
         failwith "failed to generate docs"
 )
 
+
+Target.create "Pack" (fun _ ->
+    
+    Paket.pack (fun o ->
+        { o with
+            WorkingDir = Environment.CurrentDirectory
+            OutputPath = "bin"
+            PinProjectReferences = true
+            ProjectUrl = "https://github.com/krauthaufen/Fable.Elmish.Adaptive"
+            Version = notes.NugetVersion
+            ReleaseNotes = String.concat "\n" notes.Notes
+        }
+    )
+)
+
+Target.create "Push" (fun _ ->
+    let packageNameRx = Regex @"^(?<name>[a-zA-Z_0-9\.-]+?)\.(?<version>([0-9]+\.)*[0-9]+.*?)\.nupkg$"
+    
+    if not (Git.Information.isCleanWorkingCopy ".") then
+        Git.Information.showStatus "."
+        failwith "repo not clean"
+
+    
+    if File.exists "deploy.targets" then
+        let packages =
+            !!"bin/*.nupkg"
+            |> Seq.filter (fun path ->
+                let name = Path.GetFileName path
+                let m = packageNameRx.Match name
+                if m.Success then
+                    m.Groups.["version"].Value = notes.NugetVersion
+                else
+                    false
+            )
+            |> Seq.toList
+
+        let targetsAndKeys =
+            File.ReadAllLines "deploy.targets"
+            |> Array.map (fun l -> l.Split(' '))
+            |> Array.choose (function [|dst; key|] -> Some (dst, key) | _ -> None)
+            |> Array.choose (fun (dst, key) ->
+                let path = 
+                    Path.Combine(
+                        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+                        ".ssh",
+                        key
+                    )
+                if File.exists path then
+                    let key = File.ReadAllText(path).Trim()
+                    Some (dst, key)
+                else
+                    None
+            )
+            |> Map.ofArray
+            
+        
+        Git.CommandHelper.directRunGitCommandAndFail "." "fetch --tags"
+        Git.Branches.tag "." notes.NugetVersion
+
+        let branch = Git.Information.getBranchName "."
+        Git.Branches.pushBranch "." "origin" branch
+
+        if List.isEmpty packages then
+            failwith "no packages produced"
+
+        if Map.isEmpty targetsAndKeys then
+            failwith "no deploy targets"
+            
+        for (dst, key) in Map.toSeq targetsAndKeys do
+            Trace.tracefn "pushing to %s" dst
+            let options (o : Paket.PaketPushParams) =
+                { o with 
+                    PublishUrl = dst
+                    ApiKey = key 
+                    WorkingDir = "bin"
+                }
+
+            Paket.pushFiles options packages
+
+        Git.Branches.pushTag "." "origin" notes.NugetVersion
+    ()
+)
+
 "NpmInstall" ==> 
     "DotNetCompile" ==>
     "Watch"
@@ -203,6 +286,10 @@ Target.create "GenerateDocs" (fun _ ->
     
 "DotNetCompile" ==> 
     "GenerateDocs"
+
+"DotNetCompile" ==> 
+    "Pack" ==>
+    "Push"
 
 "Debug" ==> 
     "Default"

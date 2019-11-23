@@ -1,0 +1,13 @@
+type project
+authors Aardvark Platform Team
+owners Aardvark Platform Team
+projectUrl https://github.com/krauthaufen/Fable.Elmish.Adaptive
+licenseUrl https://raw.githubusercontent.com/krauthaufen/Fable.Elmish.Adaptive/master/LICENSE
+description
+    Fable.React.Adaptive provides react bindings for adaptive values from FSharp.Data.Adaptive.
+include-pdbs true
+files
+	./**/*.fs => fable
+	./**/*.fsi => fable
+	./**/*.fsproj => fable
+	!./obj/**/*
