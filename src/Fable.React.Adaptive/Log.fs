@@ -44,14 +44,29 @@ module LogComponent =
     let create (name : string) (content : ReactElement) = 
         ofType<LogComponent, _, _> { value = (name, content) } []
 
+
+#if !BENCHMARK
+module AdaptiveComponents =
+    let private emptyDisposable = { new System.IDisposable with member x.Dispose() = () }
+    let inline addTime (_group : string) (_dt : float) = ()
+    let inline start (_name : string) = ()
+    let inline stop() = ()
+    let inline addCallback (c : unit -> unit) = ()
+    let inline startRender() = ()
+    let inline stopRender() = ()
+    let inline getTimes() : Map<string, float> = Map.empty
+    let inline measure (_group : string) (action : unit -> 'a) = action()
+    let startMeasure (_group : string) =  emptyDisposable
+
+#else
 module AdaptiveComponents =
     open Fable.Core.JsInterop
     let mutable rendersPending = 0
-    let mutable callbacks = []
+    let mutable callbacks : list<unit -> unit> = []
     let mutable times = obj()
     
     let mutable suspended : list<string> = []
-    let mutable activeGroup = None
+    let mutable activeGroup : Option<string> = None
     let mutable activeStart = 0.0
 
     let inline addTime (group : string) (dt : float) =
@@ -59,7 +74,7 @@ module AdaptiveComponents =
         else times?(group) <- dt
         
 
-    let start (name : string) =
+    let inline start (name : string) =
         let now = Performance.now()
         match activeGroup with
         | Some old ->
@@ -71,7 +86,7 @@ module AdaptiveComponents =
         activeGroup <- Some name
         activeStart <- now
 
-    let stop() =
+    let inline stop() =
         let now = Performance.now()
         match activeGroup with
         | Some old ->
@@ -88,19 +103,13 @@ module AdaptiveComponents =
         | None ->
             ()
         
-
-
-        
-
-
-
-    let addCallback c =
+    let inline addCallback c =
         callbacks <- c :: callbacks
 
-    let startRender() =
+    let inline startRender() =
         rendersPending <- rendersPending + 1
 
-    let stopRender() =
+    let inline stopRender() =
         rendersPending <- rendersPending - 1
         if rendersPending = 0 then
             for c in callbacks do
@@ -117,15 +126,11 @@ module AdaptiveComponents =
         stop()
         res
 
-    let private emptyDisposable = 
-        { new System.IDisposable with
-            member x.Dispose() = ()
-        }
 
-    let startMeasure (group : string) = 
+    let inline startMeasure (group : string) =
         start group
         { new System.IDisposable with
             member x.Dispose() = stop()
         }
-
+#endif
 
