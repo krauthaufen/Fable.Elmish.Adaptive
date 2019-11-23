@@ -288,6 +288,7 @@ Target.create "Push" (fun _ ->
     "GenerateDocs"
 
 "DotNetCompile" ==> 
+    "Release" ==>
     "Pack" ==>
     "Push"
 
