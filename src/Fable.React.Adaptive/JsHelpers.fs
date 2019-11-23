@@ -1,4 +1,4 @@
-﻿namespace Fable.JsHelpers
+﻿namespace Fable.React.Adaptive.JsHelpers
 
 open Fable.Core
 open Fable.Core.JsInterop

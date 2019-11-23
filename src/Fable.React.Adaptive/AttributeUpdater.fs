@@ -7,7 +7,7 @@ open Fable.Core
 open Browser
 open Browser.Types
 open FSharp.Data.Adaptive
-open Fable.JsHelpers
+open Fable.React.Adaptive.JsHelpers
 
 type internal MyInterface =
     abstract member handleEvent : Event -> unit

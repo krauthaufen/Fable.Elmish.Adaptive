@@ -8,7 +8,7 @@ open Fable.React
 open Fable.React.ReactiveComponents
 open Fable.React.Props
 open FSharp.Data.Adaptive
-open Fable.JsHelpers
+open Fable.React.Adaptive.JsHelpers
 open CollectionsJS
 
 type internal AdaptiveComponentProps =

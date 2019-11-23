@@ -289,11 +289,7 @@ let app =
         init = init
         update = update
         view = view
-        unpersist =
-            {
-                create = AdaptiveModel
-                update = fun t v -> t.Update v
-            }
+        unpersist = Unpersist.instance
     }
 
 
@@ -304,7 +300,7 @@ let run () =
     let link = document.createElement "link"
 
     let rep = document.createElement "div"
-    rep.id <- "performance-report"
+    rep.id <- "adaptive-performance-report"
     rep?style?position <- "fixed"
     rep?style?top <- "10px"
     rep?style?left <- "10px"

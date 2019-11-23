@@ -1,4 +1,4 @@
-﻿module CollectionsJS
+﻿module Fable.React.Adaptive.CollectionsJS
 
 open System
 open Fable.Core

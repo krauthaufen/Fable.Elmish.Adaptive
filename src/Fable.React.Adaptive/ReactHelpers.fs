@@ -4,7 +4,7 @@ open Browser
 open Fable.Core
 open Fable.Core.JsInterop
 open Fable.React
-open Fable.JsHelpers
+open Fable.React.Adaptive.JsHelpers
 
 /// Internal tool for *faking* parent nodes for React. 
 /// 

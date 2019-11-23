@@ -4,3 +4,4 @@ Fable.Browser.Dom
 FSharp.Data.Adaptive
 Fable.Elmish.React
 Fable.Promise
+Adaptify.Core

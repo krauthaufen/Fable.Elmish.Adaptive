@@ -2,7 +2,7 @@
 
 open FSharp.Data.Adaptive
 open Fable.React
-open Fable.JsHelpers
+open Fable.React.Adaptive.JsHelpers
 
 [<AutoOpen>]
 module AdaptiveHookExtensions =

@@ -2,7 +2,7 @@
 
 open Fable.React
 open FSharp.Data.Adaptive
-open Fable.JsHelpers
+open Fable.React.Adaptive.JsHelpers
 
 [<AutoOpen>]
 module Tags =   

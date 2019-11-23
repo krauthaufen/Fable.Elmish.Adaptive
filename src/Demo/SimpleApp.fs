@@ -6,7 +6,7 @@ open Fable.React
 open Fable.React.Props
 open Fable.React.Adaptive
 open Browser
-open Fable.JsHelpers
+open Fable.React.Adaptive.JsHelpers
 open Model
 
 type Message =
@@ -87,7 +87,7 @@ let app =
         view = view
         unpersist =
             {
-                create = AdaptiveModel
+                init = AdaptiveModel
                 update = fun t v -> t.Update v
             }
     }
