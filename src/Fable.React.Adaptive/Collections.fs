@@ -4,7 +4,7 @@ open System
 open Fable.Core
 open Fable.Core.JsInterop
 
-[<AllowNullLiteral>]
+[<AllowNullLiteral; System.Diagnostics.CodeAnalysis.SuppressMessage("NameConventions", "*")>]
 type SortedSetNode<'T> =
     abstract value : 'T
     abstract length : int
@@ -12,6 +12,7 @@ type SortedSetNode<'T> =
     abstract left : SortedSetNode<'T>
     abstract right : SortedSetNode<'T>
 
+[<System.Diagnostics.CodeAnalysis.SuppressMessage("NameConventions", "*")>]
 type SortedSet<'T> =
     [<Emit("$0.push($1...)")>]
     abstract Add : [<ParamArray; ParamList>] values : 'T[] -> unit
@@ -35,6 +36,7 @@ type SortedSet<'T> =
     abstract Count : int
 
 [<Import("SortedSet", "sorted-set-collections/sorted-set")>]
+[<System.Diagnostics.CodeAnalysis.SuppressMessage("NameConventions", "*")>]
 type SortedSetConstructor =
     [<EmitConstructor>]
     abstract Create<'T> : ?values : seq<'T> * ?equals : System.Func<'T, 'T, bool> * ?compare : System.Func<'T, 'T, int> * ?getDefault : System.Func<'T> -> SortedSet<'T>

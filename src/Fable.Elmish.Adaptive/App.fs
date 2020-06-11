@@ -127,7 +127,7 @@ module App =
                 start <- Performance.now()
                 let dd = Fable.React.Adaptive.AdaptiveComponents.startMeasure "unpersist"
                 let t = new Transaction()
-                Transaction.using t (fun () ->
+                Transaction.useTransaction t (fun () ->
                     app.unpersist.update amodel model
                 )
                 dd.Dispose()

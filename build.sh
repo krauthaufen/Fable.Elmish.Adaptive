@@ -2,7 +2,7 @@
 
 if [ ! -f .paket/paket ]; then
     echo installing paket
-    dotnet tool install Paket --version 5.215.0 --tool-path .paket
+    dotnet tool install Paket --version 5.242.2 --tool-path .paket
 fi
 
 if [ ! -f paket.lock ]; then

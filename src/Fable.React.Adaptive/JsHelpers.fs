@@ -111,13 +111,13 @@ module MyPromiseBuilder =
 
     type MyPromiseBuilder() =
         
-        member inline x.Zero() = Promise.resolve ()
+        member inline x.Zero() = Fable.Core.JS.Constructors.Promise.resolve ()
 
         member inline x.Bind(p : Promise<'a>, mapping : 'a -> Promise<'b>) =
             p.``then``(mapping) |> unbox<Promise<'b>>
             
         member inline x.Return(v : 'a) =
-            Promise.resolve v
+            Fable.Core.JS.Constructors.Promise.resolve v
 
         member inline x.Delay(action : unit -> Promise<'a>) =
             action
@@ -136,7 +136,7 @@ module MyPromiseBuilder =
                     mapping(e.Current).``then``(fun () -> run mapping e) |> unbox<Promise<unit>>
                 else
                     e.Dispose()
-                    Promise.resolve ()
+                    Fable.Core.JS.Constructors.Promise.resolve ()
             let e = s.GetEnumerator()
             run mapping e
                 

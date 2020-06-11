@@ -18,7 +18,7 @@ let newEntry desc =
    editing = false }
 
 let emptyModel =
-   { entries = Seq.init 128 (fun i -> newEntry (sprintf "entry%d" i)) |> IndexList.ofSeq
+   { entries = IndexList.empty
      visibility = ALL_TODOS
      field = "" }
 
@@ -59,7 +59,7 @@ let update (model:Model) (msg:Msg)  : Model =
        let xs = if System.String.IsNullOrEmpty model.field then
                    model.entries
                 else
-                   IndexList.prepend (newEntry model.field) model.entries
+                   IndexList.add (newEntry model.field) model.entries
        { model with
            field = ""
            entries = xs }
@@ -138,7 +138,8 @@ let viewEntry (id : Index) (todo : AdaptiveEntry) dispatch =
    (AList.ofList [ 
      div
        [ ClassName "view" ]
-       [ ainput (
+       [ 
+         ainput (
             attr { 
                  ClassName "toggle"
                  Type "checkbox"

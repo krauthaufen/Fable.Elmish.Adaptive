@@ -5,6 +5,7 @@ open Fable.React
 open Fable.React.ReactiveComponents
 open Fable.React.Adaptive.JsHelpers
 
+[<System.Diagnostics.CodeAnalysis.SuppressMessage("NameConventions", "*")>]
 type internal LogComponent(value : State<string * ReactElement>) =
     inherit Component<State<string * ReactElement>, State<string * ReactElement>>(value)
     //static do ComponentHelpers.setDisplayName<LogComponent,_,_> "Log"
@@ -45,20 +46,7 @@ module LogComponent =
         ofType<LogComponent, _, _> { value = (name, content) } []
 
 
-#if !BENCHMARK
-module AdaptiveComponents =
-    let private emptyDisposable = { new System.IDisposable with member x.Dispose() = () }
-    let inline addTime (_group : string) (_dt : float) = ()
-    let inline start (_name : string) = ()
-    let inline stop() = ()
-    let inline addCallback (c : unit -> unit) = ()
-    let inline startRender() = ()
-    let inline stopRender() = ()
-    let inline getTimes() : Map<string, float> = Map.empty
-    let inline measure (_group : string) (action : unit -> 'a) = action()
-    let startMeasure (_group : string) =  emptyDisposable
-
-#else
+#if BENCHMARK
 module AdaptiveComponents =
     open Fable.Core.JsInterop
     let mutable rendersPending = 0
@@ -132,5 +120,18 @@ module AdaptiveComponents =
         { new System.IDisposable with
             member x.Dispose() = stop()
         }
+#else
+module AdaptiveComponents =
+    let private emptyDisposable = { new System.IDisposable with member x.Dispose() = () }
+    let inline addTime (_group : string) (_dt : float) = ()
+    let inline start (_name : string) = ()
+    let inline stop() = ()
+    let inline addCallback (c : unit -> unit) = ()
+    let inline startRender() = ()
+    let inline stopRender() = ()
+    let inline getTimes() : Map<string, float> = Map.empty
+    let inline measure (_group : string) (action : unit -> 'a) = action()
+    let startMeasure (_group : string) =  emptyDisposable
+
 #endif
 

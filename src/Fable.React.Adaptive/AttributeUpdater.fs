@@ -26,7 +26,7 @@ type AttributeUpdater(node : Element, attributes : AttributeMap) =
     let mutable attributes = attributes
     let mutable node = node
     let mutable reader = attributes.GetReader()
-    let mutable listeners = UncheckedDictionary.create<string, MyInterface>()
+    let mutable listeners = DefaultDictionary.create<string, MyInterface>()
 
     static let evtName (name : string) =
         if name.StartsWith "on" then name.Substring(2).ToLower()

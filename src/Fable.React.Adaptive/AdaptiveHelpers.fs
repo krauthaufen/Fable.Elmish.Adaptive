@@ -46,11 +46,11 @@ module AVal =
                 with get() = x.Level
                 and set l = x.Level <- l
         
-        interface AdaptiveValue with
+        interface IAdaptiveValue with
             member x.GetValueUntyped t = x.GetValue t :> obj
             member x.ContentType = typeof<obj>
 
-        interface AdaptiveValue<'T2> with
+        interface IAdaptiveValue<'T2> with
             member x.GetValue t = x.GetValue t
 
     /// Creates an `aval<'T option>` that will initially hold `None` and when the promise is resolved changes to `Some`.

@@ -32,6 +32,22 @@
             "problemMatcher": [
                 "$fable-webpack"
             ]
+        },
+        {
+            "command": "${workspaceRoot}/build.sh",
+            "windows": {
+                "command": "${workspaceRoot}/build.cmd"
+            },
+            "label": "Run",
+            "args": [
+                "-t",
+                "RunDebug"
+            ],
+            "group": "build",
+            "isBackground": true,
+            "problemMatcher": [
+                "$fable-webpack"
+            ]
         }
     ]
 }
