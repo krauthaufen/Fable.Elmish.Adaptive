@@ -12,7 +12,6 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Model.fs" />
-    <Compile Include="Model.g.fs" />
     <Compile Include="AdaptiveListDemo.fs" />
     <Compile Include="SimpleApp.fs" />
     <Compile Include="TodoMvc.fs" />

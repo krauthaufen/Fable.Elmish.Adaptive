@@ -2,7 +2,7 @@
 
 open FSharp.Data.Adaptive
 open Adaptify
-
+ 
 [<ModelType>]
 type Named<'a> =
     {
