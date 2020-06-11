@@ -49,7 +49,7 @@ type AttributeUpdater(node : Element, attributes : AttributeMap) =
             | Remove -> style?(k) <- null
 
     let perform (old : HashMap<string, obj>) (ops : HashMapDelta<string, obj>) =    
-        AdaptiveComponents.measure "mutate" (fun () ->
+        //AdaptiveComponents.measure "mutate" (fun () ->
             for (name, op) in ops do
                 match op with
                 | Remove ->
@@ -88,15 +88,19 @@ type AttributeUpdater(node : Element, attributes : AttributeMap) =
                     else
                         if node?(name) <> vv then
                             node?(name) <- vv
-        )
+        //)
 
     member x.Update(t : AdaptiveToken) =
-        x.EvaluateIfNeeded t () (fun t ->
-            
-            let old = reader.State
-            let ops = AdaptiveComponents.measure "evalA" (fun () -> reader.GetChanges t)
-            perform old ops
-        )
+        x.EvaluateAlways t (fun t ->
+            if x.OutOfDate then
+                let old = reader.State
+                let ops = AdaptiveComponents.measure "evalA" (fun () -> reader.GetChanges t)
+                perform old ops
+
+                1
+            else
+                2
+        ) |> ignore
 
     member x.Destroy() =
         let old = reader.State

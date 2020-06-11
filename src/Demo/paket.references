@@ -2,7 +2,7 @@ FSharp.Core
 Fable.Core
 Fable.Browser.Dom
 FSharp.Data.Adaptive
-Adaptify.MSBuild
+Adaptify.Core
 Fable.Elmish.React
 Fable.Promise
 Elmish

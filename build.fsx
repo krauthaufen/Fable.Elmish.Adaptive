@@ -61,7 +61,7 @@ Target.create "DotNetCompile" (fun _ ->
         let v = sprintf "%d.%d.%d.%s" notes.SemVer.Major notes.SemVer.Minor notes.SemVer.Patch (string notes.SemVer.Build)
 
         { o with 
-            Configuration = DotNet.BuildConfiguration.Release
+            Configuration = DotNet.BuildConfiguration.Debug
             
             MSBuildParams = 
                 { o.MSBuildParams with 

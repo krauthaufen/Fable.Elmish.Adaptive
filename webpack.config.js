@@ -41,16 +41,20 @@ module.exports = {
 				use: {
 					loader: "fable-loader",
                     options: {
-                        define: (debug ? ["BENCHMARK"] : [])
+                        define: (debug ? [] : [])
                     }
 				}
 			}
         ]
     },
 	plugins: [
-	  new CopyPlugin([
-	    { from: path.join(__dirname, "./src/Demo/index.html"), to: path.join(path.join(__dirname, outPath), "./index.html") },
-	    { from: path.join(__dirname, "./src/Demo/index.css"), to: path.join(path.join(__dirname, outPath), "./index.css") }
-	  ])
+	  new CopyPlugin(
+      {
+          patterns: [
+
+            { from: path.join(__dirname, "./src/Demo/index.html"), to: path.join(path.join(__dirname, outPath), "./index.html") },
+            { from: path.join(__dirname, "./src/Demo/index.css"), to: path.join(path.join(__dirname, outPath), "./index.css") }
+          ]
+      })
     ]
 }
