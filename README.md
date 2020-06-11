@@ -13,7 +13,11 @@ Nonetheless it is worth mentioning that the component uses react for rendering i
 If you have any questions or want to get involved just join us on discord: [![Discord](https://discordapp.com/api/guilds/611129394764840960/widget.png)](https://discord.gg/UyecnhM)
 
 ### Building
-the Demo project can be started using `build -t Watch` (starting a webpack-dev-server) or `build -t Run(Debug|Release)` (bundling the demo project and starting a web-server in the output directory)
+
+   npm install
+   build
+   
+The Demo project can be started using `build -t Watch` (starting a webpack-dev-server) or `build -t Run(Debug|Release)` (bundling the demo project and starting a web-server in the output directory)
 
 Switching between Demos currently requires changing `src/Demo/Program.fs` atm.
 
